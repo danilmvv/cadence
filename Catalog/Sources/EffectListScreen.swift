@@ -25,12 +25,7 @@ struct EffectListScreen: View {
 
                 Section("Signature — explicit opt-in only") {
                     NavigationLink("disintegrate") { DisintegrateScreen() }
-                }
-
-                Section("Not yet built") {
-                    Text("This effect is planned but not yet in the package: corner emergence.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                    NavigationLink("cornerEmergence") { CornerEmergenceScreen() }
                 }
             }
             .navigationTitle("Cadence")
