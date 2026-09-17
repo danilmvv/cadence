@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - `swift-tools-version: 6.3`, `platforms: [.iOS(.v26)]`.
-- Тесты и сборка: `xcodebuild test -scheme Cadence -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'`. Проверено на этой машине; `swift test` не работает, потому что пакет iOS-only.
+- Тесты и сборка: `xcodebuild test -scheme Cadence-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'`. Проверено на этой машине; `swift test` не работает, потому что пакет iOS-only.
 - `CadenceCore` **не импортирует SwiftUI и UIKit**. Нарушение этого — провал задачи.
 - Код, имена символов, DocC — английский. Комментарии, объясняющие «почему», — русский. Спека и ресерч — русский.
 - Никаких голых `try?` на путях отказа. Логирование через `OSLog`, категории `motion`, `haptics`, `resolver`.
@@ -162,7 +162,7 @@ import Testing
 
 Выполнить:
 ```bash
-xcodebuild test -scheme Cadence -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
+xcodebuild test -scheme Cadence-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 ```
 Ожидание: провал — нет `Package.swift`, схема `Cadence` не найдена.
 
@@ -244,7 +244,7 @@ import Testing
 - [ ] **Step 5: Прогнать тесты**
 
 ```bash
-xcodebuild test -scheme Cadence -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
+xcodebuild test -scheme Cadence-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 ```
 Ожидание: `** TEST SUCCEEDED **`, три теста прошли.
 
@@ -330,7 +330,7 @@ func transientChangesHaveBudget(change: ChangeClass, expected: Duration) {
 - [ ] **Step 2: Прогнать, убедиться в провале компиляции**
 
 ```bash
-xcodebuild test -scheme Cadence -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
+xcodebuild test -scheme Cadence-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 ```
 Ожидание: `cannot find 'MotionBudget' in scope` и аналогичные.
 
@@ -537,7 +537,7 @@ public extension Duration {
 - [ ] **Step 4: Прогнать тесты**
 
 ```bash
-xcodebuild test -scheme Cadence -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
+xcodebuild test -scheme Cadence-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 ```
 Ожидание: `** TEST SUCCEEDED **`, все тесты из шага 1 зелёные.
 
@@ -627,7 +627,7 @@ private final class SpyOutput: HapticOutput {
 - [ ] **Step 2: Прогнать, убедиться в провале**
 
 ```bash
-xcodebuild test -scheme Cadence -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
+xcodebuild test -scheme Cadence-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 ```
 Ожидание: `cannot find 'HapticScheduler' in scope`.
 
@@ -693,7 +693,7 @@ public final class HapticScheduler {
 - [ ] **Step 5: Прогнать тесты планировщика**
 
 ```bash
-xcodebuild test -scheme Cadence -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
+xcodebuild test -scheme Cadence-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 ```
 Ожидание: три теста планировщика зелёные.
 
@@ -867,7 +867,7 @@ public final class CoreHapticsOutput: HapticOutput {
 
 ```bash
 rm Sources/CadenceHaptics/Placeholder.swift
-xcodebuild test -scheme Cadence -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
+xcodebuild test -scheme Cadence-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 ```
 Ожидание: `** TEST SUCCEEDED **`.
 
@@ -1049,7 +1049,7 @@ let routineCoverage: [RoutineInteraction] = {
 - [ ] **Step 2: Прогнать, убедиться в провале**
 
 ```bash
-xcodebuild test -scheme Cadence -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
+xcodebuild test -scheme Cadence-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 ```
 Ожидание: `cannot find 'resolve' in scope`, `cannot find 'RoutineInteraction' in scope`.
 
@@ -1246,7 +1246,7 @@ func degrade(_ plan: FeedbackPlan, in context: CadenceContext) -> FeedbackPlan {
 - [ ] **Step 5: Прогнать тесты**
 
 ```bash
-xcodebuild test -scheme Cadence -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
+xcodebuild test -scheme Cadence-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 ```
 Ожидание: все тесты правил зелёные.
 
@@ -1349,7 +1349,7 @@ let signatureCoverage: [SignatureInteraction] = {
 - [ ] **Step 2: Прогнать, убедиться в провале**
 
 ```bash
-xcodebuild test -scheme Cadence -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
+xcodebuild test -scheme Cadence-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 ```
 Ожидание: `cannot find an overload for 'resolve' that accepts SignatureInteraction`.
 
@@ -1404,7 +1404,7 @@ func baseline(for event: SignatureInteraction) -> FeedbackPlan {
 - [ ] **Step 4: Прогнать тесты**
 
 ```bash
-xcodebuild test -scheme Cadence -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
+xcodebuild test -scheme Cadence-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 ```
 Ожидание: `** TEST SUCCEEDED **`.
 
@@ -1532,7 +1532,7 @@ let kindCoverage: [MotionKind] = {
 - [ ] **Step 2: Прогнать, убедиться в провале**
 
 ```bash
-xcodebuild test -scheme Cadence -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
+xcodebuild test -scheme Cadence-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 ```
 Ожидание: `cannot find 'ShakeEffect' in scope`.
 
@@ -1668,7 +1668,7 @@ public struct CadenceMotionModifier: ViewModifier {
 
 ```bash
 rm Sources/CadenceMotion/Placeholder.swift
-xcodebuild test -scheme Cadence -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
+xcodebuild test -scheme Cadence-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 ```
 Ожидание: `** TEST SUCCEEDED **`.
 
@@ -1760,7 +1760,7 @@ func nonActiveScenePhaseSuppressesScene(phase: ScenePhase) {
 - [ ] **Step 2: Прогнать, убедиться в провале**
 
 ```bash
-xcodebuild test -scheme Cadence -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
+xcodebuild test -scheme Cadence-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 ```
 Ожидание: `type 'CadenceContext' has no member 'make'`.
 
@@ -1917,7 +1917,7 @@ struct CadenceEventModifier<T: Equatable>: ViewModifier {
 
 ```bash
 rm Sources/Cadence/Placeholder.swift
-xcodebuild test -scheme Cadence -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
+xcodebuild test -scheme Cadence-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 ```
 Ожидание: `** TEST SUCCEEDED **`.
 
@@ -2271,7 +2271,7 @@ xcodebuild build -project Catalog/Catalog.xcodeproj -scheme Catalog \
 
 ## Проверка перед тем, как сказать «готово»
 
-    xcodebuild test -scheme Cadence \
+    xcodebuild test -scheme Cadence-Package \
       -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 
 `swift test` не работает: пакет iOS-only.
