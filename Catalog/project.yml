@@ -1,0 +1,26 @@
+name: Catalog
+options:
+  bundleIdPrefix: dev.imdanil.cadence
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+packages:
+  Cadence:
+    path: ..
+targets:
+  Catalog:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    dependencies:
+      - package: Cadence
+        product: Cadence
+    configFiles:
+      Debug: Local.xcconfig
+      Release: Local.xcconfig
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: Cadence
+        UILaunchScreen: {}
