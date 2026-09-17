@@ -158,18 +158,20 @@ public func resolve(_ event: SignatureInteraction, in context: CadenceContext) -
 func baseline(for event: SignatureInteraction) -> FeedbackPlan {
     switch event {
     case .destroyed:
-        // 900 мс сознательно превышают бюджет крупного перемещения.
+        // 1200 мс сознательно превышают бюджет крупного перемещения.
         // Основание эстетическое, не эмпирическое — см. docs/research/05-novelty.md,
         // грейд D. Плата за превышение — запертость за отдельным типом.
+        // Было 900 мс: осколки успевают оторваться, но не долететь, и волна
+        // отрыва сливается с разлётом в одну смазанную вспышку.
         FeedbackPlan(
             motion: MotionSpec(
-                duration: .milliseconds(900),
+                duration: .milliseconds(1200),
                 curve: .easeIn,
                 change: .journey,
                 kind: .disintegrate
             ),
             haptic: HapticSpec(
-                pattern: .decayingRumble(duration: .milliseconds(900)),
+                pattern: .decayingRumble(duration: .milliseconds(1200)),
                 minimumInterval: .seconds(1)
             ),
             tier: .signature

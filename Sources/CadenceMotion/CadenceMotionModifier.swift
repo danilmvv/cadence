@@ -70,11 +70,18 @@ public struct CadenceMotionModifier<Trigger: Equatable>: ViewModifier {
             // анимирует сама вызывающая сторона — визуально ничего не трогаем.
             content
 
-        case .shimmer, .progress, .drawOn, .cornerReveal, .disintegrate:
-            // Видовое семейство (рисует сам Cadence) и виды, которым нужен
-            // шейдер/стекло — не модификаторное семейство, см.
-            // `MotionKind.isModifierFamily`. Модификатор их игнорирует явно,
-            // а не через `default`, чтобы новый вид не провалился сюда молча.
+        case .disintegrate:
+            // Тот же разовый прогон, что у `.scale` и `.shake`, только
+            // прогресс уходит в Metal-шейдер. Ветка выбирается по виду
+            // движения из уже разрешённого плана, а не по среде: решение о
+            // том, каким движение будет, целиком принадлежит резолверу.
+            content.modifier(DisintegratePulseModifier(duration: spec.duration.timeInterval, pulse: pulse))
+
+        case .shimmer, .progress, .drawOn, .cornerReveal:
+            // Видовое семейство: рисует сам Cadence, модификатором не
+            // выражается — см. `MotionKind.isModifierFamily`. Игнорируем
+            // явно, а не через `default`, чтобы новый вид не провалился
+            // сюда молча.
             content
         }
     }
