@@ -8,11 +8,11 @@ struct DegradationControls: View {
     @Binding var context: CadenceContext
 
     var body: some View {
-        Section("Среда") {
+        Section("Environment") {
             Toggle("Reduce Motion", isOn: $context.reduceMotion)
             Toggle("Reduce Transparency", isOn: $context.reduceTransparency)
-            Toggle("Экономия энергии", isOn: $context.lowPower)
-            Toggle("Хаптик доступен", isOn: $context.hapticsAvailable)
+            Toggle("Low Power Mode", isOn: $context.lowPower)
+            Toggle("Haptics Available", isOn: $context.hapticsAvailable)
         }
     }
 }

@@ -6,11 +6,11 @@ struct ContentArrivalScreen: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            Text("Появление контента каскадом. Задержка ограничена бюджетом крупного перемещения: иначе последняя ячейка ждёт секунды и это читается как тормоза.")
+            Text("Content arriving in a cascade. The delay is capped by the large-movement budget — otherwise the last row would wait a full second, and that reads as lag rather than animation.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 
-            Button(shown ? "Спрятать" : "Показать") { shown.toggle() }
+            Button(shown ? "Hide" : "Show") { shown.toggle() }
                 .buttonStyle(.bordered)
 
             if shown {

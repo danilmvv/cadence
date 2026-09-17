@@ -11,18 +11,20 @@ struct EffectListScreen: View {
             List {
                 DegradationControls(context: $context)
 
-                Section("Workhorse — сотни раз за сессию") {
+                Section("Workhorse — hundreds of times per session") {
                     NavigationLink("pressResponse") { PressResponseScreen() }
                     NavigationLink("selectionShift") { SelectionShiftScreen() }
                     NavigationLink("contentArrival") { ContentArrivalScreen() }
                 }
 
-                Section("Accent — единицы раз за сессию") {
+                Section("Accent — a handful of times per session") {
+                    NavigationLink("waitingState") { WaitingStateScreen() }
+                    NavigationLink("taskSuccess") { TaskSuccessScreen() }
                     NavigationLink("validationFailure") { ValidationFailureScreen() }
                 }
 
-                Section("Ещё не реализовано") {
-                    Text("Эти эффекты запланированы, но в пакете их пока нет: скелетон ожидания, галочка успеха, щелчок Таноса, выход из угла экрана.")
+                Section("Not yet built") {
+                    Text("These effects are planned but not yet in the package: the Thanos snap and corner emergence.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

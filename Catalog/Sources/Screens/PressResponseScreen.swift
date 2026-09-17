@@ -7,18 +7,18 @@ struct PressResponseScreen: View {
 
     var body: some View {
         VStack(spacing: 32) {
-            Text("Отклик на нажатие. Бюджет 100 мс — порог, ниже которого отклик неотличим от прямого манипулирования объектом.")
+            Text("Press response. Budget: 100 ms — the threshold below which feedback is indistinguishable from directly manipulating the object.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 
-            Button("Нажми") {
+            Button("Tap me") {
                 taps += 1
                 counter.record("pressResponse")
             }
             .buttonStyle(.borderedProminent)
             .cadence(.pressed, trigger: taps)
 
-            Text("Сыграл \(counter.count("pressResponse")) раз за сессию")
+            Text("Fired \(counter.count("pressResponse")) times this session")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

@@ -7,15 +7,15 @@ struct ValidationFailureScreen: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            Text("Ошибка ввода. Введи что угодно кроме 1234 и нажми проверить.")
+            Text("Input validation failure. Type anything other than 1234 and tap check.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 
-            TextField("Код", text: $code)
+            TextField("Code", text: $code)
                 .textFieldStyle(.roundedBorder)
                 .cadence(.validationFailed, trigger: attempts)
 
-            Button("Проверить") {
+            Button("Check") {
                 if code != "1234" { attempts += 1 }
             }
             .buttonStyle(.borderedProminent)
