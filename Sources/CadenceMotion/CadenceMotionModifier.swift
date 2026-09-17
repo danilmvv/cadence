@@ -77,11 +77,19 @@ public struct CadenceMotionModifier<Trigger: Equatable>: ViewModifier {
             // том, каким движение будет, целиком принадлежит резолверу.
             content.modifier(DisintegratePulseModifier(duration: spec.duration.timeInterval, pulse: pulse))
 
-        case .shimmer, .progress, .drawOn, .cornerReveal:
+        case .shimmer, .progress, .drawOn:
             // Видовое семейство: рисует сам Cadence, модификатором не
             // выражается — см. `MotionKind.isModifierFamily`. Игнорируем
             // явно, а не через `default`, чтобы новый вид не провалился
             // сюда молча.
+            content
+
+        case .cornerReveal:
+            // Тоже видовое семейство, но по другой причине, чем скелетон:
+            // элементу нужно обрамление — стеклянная форма, концентричная
+            // углу устройства, — а модификатор обрамление не создаёт, он
+            // только накладывается на чужую вью. Рисует `CadenceCornerReveal`,
+            // публичный вход — `CadenceCornerEmergence`.
             content
         }
     }
