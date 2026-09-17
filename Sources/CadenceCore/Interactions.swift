@@ -1,0 +1,28 @@
+/// Повседневные события интерфейса.
+///
+/// Отдельный тип от `SignatureInteraction` — это основной механизм, которым
+/// ресерч влияет на использование: повесить эффект уровня signature на
+/// обычное действие не запрещено соглашением, а не компилируется.
+public enum RoutineInteraction: Sendable, Equatable {
+    /// Палец коснулся интерактивного элемента.
+    case pressed
+    /// Сменился выбранный элемент: сегмент, таб, значение пикера.
+    case selectionChanged
+    /// Появился контент. `staggerIndex` — порядковый номер в списке.
+    case contentArrived(staggerIndex: Int)
+    /// Идёт ожидание. `elapsed` считает вызывающая сторона: резолвер
+    /// не должен знать текущее время, иначе он перестаёт быть чистым.
+    case waiting(elapsed: Duration)
+    /// Ввод не прошёл проверку.
+    case validationFailed
+    /// Задача завершилась успешно.
+    case taskSucceeded
+}
+
+/// События, для которых уместны редкие выразительные эффекты.
+public enum SignatureInteraction: Sendable, Equatable {
+    /// Необратимое удаление.
+    case destroyed
+    /// Появление из угла экрана.
+    case summoned(from: ScreenCorner)
+}
