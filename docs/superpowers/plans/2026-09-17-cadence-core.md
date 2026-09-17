@@ -1938,37 +1938,90 @@ git commit -m "Публичный API: .cadence и .cadenceSignature, мост �
 Демо-приложение — не витрина, а инструмент проверки: тактильную часть и субъективное качество движения нельзя оценить по коду и нельзя заассертить.
 
 **Files:**
-- Create: `Catalog/Catalog.xcodeproj` (вручную через Xcode, шаги ниже)
-- Create: `Catalog/Catalog/CatalogApp.swift`
-- Create: `Catalog/Catalog/EffectListScreen.swift`
-- Create: `Catalog/Catalog/DegradationControls.swift`
-- Create: `Catalog/Catalog/FireCounter.swift`
-- Create: `Catalog/Catalog/Screens/PressResponseScreen.swift`
-- Create: `Catalog/Catalog/Screens/SelectionShiftScreen.swift`
-- Create: `Catalog/Catalog/Screens/ContentArrivalScreen.swift`
-- Create: `Catalog/Catalog/Screens/ValidationFailureScreen.swift`
+- Create: `Catalog/project.yml`
+- Create: `Catalog/Local.xcconfig.example`
+- Create: `Catalog/Sources/CatalogApp.swift`
+- Create: `Catalog/Sources/EffectListScreen.swift`
+- Create: `Catalog/Sources/DegradationControls.swift`
+- Create: `Catalog/Sources/FireCounter.swift`
+- Create: `Catalog/Sources/Screens/PressResponseScreen.swift`
+- Create: `Catalog/Sources/Screens/SelectionShiftScreen.swift`
+- Create: `Catalog/Sources/Screens/ContentArrivalScreen.swift`
+- Create: `Catalog/Sources/Screens/ValidationFailureScreen.swift`
+- Modify: `.gitignore`
 - Create: `AGENTS.md`
+
+`Catalog/Catalog.xcodeproj` генерируется и не коммитится.
 
 **Interfaces:**
 - Consumes: `View.cadence(_:trigger:)`, `EnvironmentValues.cadenceContextOverride`, `CadenceContext` из задачи 8.
 - Produces: приложение `Catalog`; `AGENTS.md` с правилом ручной проверки хаптиков.
 
-- [ ] **Step 1: Создать проект вручную в Xcode**
+- [ ] **Step 1: Описать проект и сгенерировать его**
 
-Инструментов генерации проектов на машине нет (`xcodegen` и `tuist` отсутствуют), поэтому таргет создаётся руками. Точные шаги:
+`xcodegen` 2.46.0 установлен. Проект описывается текстом и не коммитится: сгенерированный `.xcodeproj` — артефакт, а не исходник.
 
-1. Xcode → File → New → Project → iOS → App.
-2. Product Name: `Catalog`. Interface: SwiftUI. Language: Swift. Storage: None. Тесты не включать.
-3. Сохранить в `~/projects/cadence/Catalog`.
-4. Target Catalog → General → Minimum Deployments → iOS 26.0.
-5. Target Catalog → Signing & Capabilities → снять Automatically manage signing, выбрать **Sign to Run Locally**. Команду разработчика не проставлять.
-6. File → Add Package Dependencies → Add Local → выбрать папку `~/projects/cadence` → добавить продукт `Cadence` к таргету Catalog.
-7. Собрать пустое приложение и убедиться, что оно запускается в симуляторе.
+```yaml
+# Catalog/project.yml
+name: Catalog
+options:
+  bundleIdPrefix: dev.imdanil.cadence
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+packages:
+  Cadence:
+    path: ..
+targets:
+  Catalog:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    dependencies:
+      - package: Cadence
+        product: Cadence
+    configFiles:
+      Debug: Local.xcconfig
+      Release: Local.xcconfig
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: Cadence
+        UILaunchScreen: {}
+```
+
+```
+// Catalog/Local.xcconfig.example
+// Личная команда разработчика — нужна только для запуска на физическом
+// устройстве; для симулятора не требуется.
+//
+// Файл Local.xcconfig не коммитится намеренно: рабочие аккаунты в этот
+// репозиторий не подмешиваются.
+//
+// DEVELOPMENT_TEAM = XXXXXXXXXX
+```
+
+Добавить в `.gitignore`:
+```
+Catalog/Catalog.xcodeproj/
+Catalog/Local.xcconfig
+```
+
+Сгенерировать:
+```bash
+cd Catalog
+[ -f Local.xcconfig ] || cp Local.xcconfig.example Local.xcconfig
+xcodegen generate
+cd ..
+```
+
+Ожидание: `Created project at Catalog/Catalog.xcodeproj`.
 
 - [ ] **Step 2: Написать счётчик срабатываний**
 
 ```swift
-// Catalog/Catalog/FireCounter.swift
+// Catalog/Sources/FireCounter.swift
 import Observation
 
 /// Делает понятие tier физически ощутимым: видно, сколько раз эффект
@@ -1990,7 +2043,7 @@ final class FireCounter {
 - [ ] **Step 3: Написать переключатели деградации**
 
 ```swift
-// Catalog/Catalog/DegradationControls.swift
+// Catalog/Sources/DegradationControls.swift
 import SwiftUI
 import Cadence
 import CadenceCore
@@ -2014,7 +2067,7 @@ struct DegradationControls: View {
 - [ ] **Step 4: Написать корневой экран**
 
 ```swift
-// Catalog/Catalog/CatalogApp.swift
+// Catalog/Sources/CatalogApp.swift
 import SwiftUI
 
 @main
@@ -2028,7 +2081,7 @@ struct CatalogApp: App {
 ```
 
 ```swift
-// Catalog/Catalog/EffectListScreen.swift
+// Catalog/Sources/EffectListScreen.swift
 import SwiftUI
 import Cadence
 import CadenceCore
@@ -2063,7 +2116,7 @@ struct EffectListScreen: View {
 - [ ] **Step 5: Написать экраны эффектов**
 
 ```swift
-// Catalog/Catalog/Screens/PressResponseScreen.swift
+// Catalog/Sources/Screens/PressResponseScreen.swift
 import SwiftUI
 import Cadence
 
@@ -2095,7 +2148,7 @@ struct PressResponseScreen: View {
 ```
 
 ```swift
-// Catalog/Catalog/Screens/SelectionShiftScreen.swift
+// Catalog/Sources/Screens/SelectionShiftScreen.swift
 import SwiftUI
 import Cadence
 
@@ -2129,7 +2182,7 @@ struct SelectionShiftScreen: View {
 ```
 
 ```swift
-// Catalog/Catalog/Screens/ContentArrivalScreen.swift
+// Catalog/Sources/Screens/ContentArrivalScreen.swift
 import SwiftUI
 import Cadence
 
@@ -2164,7 +2217,7 @@ struct ContentArrivalScreen: View {
 ```
 
 ```swift
-// Catalog/Catalog/Screens/ValidationFailureScreen.swift
+// Catalog/Sources/Screens/ValidationFailureScreen.swift
 import SwiftUI
 import Cadence
 
@@ -2223,6 +2276,16 @@ xcodebuild build -project Catalog/Catalog.xcodeproj -scheme Catalog \
 
 `swift test` не работает: пакет iOS-only.
 
+Проект каталога не коммитится — он генерируется:
+
+    cd Catalog && xcodegen generate && cd ..
+    xcodebuild build -project Catalog/Catalog.xcodeproj -scheme Catalog \
+      -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
+
+Для запуска на физическом устройстве вписать личную команду разработчика
+в `Catalog/Local.xcconfig` (файл не коммитится). Рабочие аккаунты сюда
+не подмешиваются.
+
 ## Чего автотесты не проверяют
 
 **Хаптику проверить тестами нельзя.** Ощущение вибрации не заассертить.
@@ -2248,7 +2311,7 @@ xcodebuild build -project Catalog/Catalog.xcodeproj -scheme Catalog \
 - [ ] **Step 8: Commit**
 
 ```bash
-git add Catalog AGENTS.md
+git add Catalog .gitignore AGENTS.md
 git commit -m "Каталог: четыре эффекта, тумблеры деградации, счётчик срабатываний
 
 Инструмент ручной проверки: хаптику и субъективное качество движения
