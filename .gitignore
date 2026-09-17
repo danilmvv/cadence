@@ -7,3 +7,4 @@ xcuserdata/
 .superpowers/
 Catalog/Catalog.xcodeproj/
 Catalog/Local.xcconfig
+Catalog/Info.plist
