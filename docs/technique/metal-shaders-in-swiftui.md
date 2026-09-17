@@ -18,15 +18,26 @@
 
 ## Статус кода в этом документе
 
-**Ни один пример Metal или Swift ниже не скомпилирован и не запущен.** Ни
-один тестовый таргет пакета их не собирает — они существуют только в этом
-файле. Это рабочая гипотеза о том, как `disintegrate` должен быть устроен,
-собранная из документированных сигнатур модификаторов и из независимо
-проверяемых сторонних примеров (раздел «Источники» внизу), а не проверенный
-факт. Когда `disintegrate` будет реализован по плану, код здесь будет либо
-заменён на действительно скомпилированную версию, либо явно помечен как
-подтверждённый — до этого момента к каждому листингу нужно относиться как к
-черновику.
+**Раздел 5 проверен.** Оба листинга в нём — Metal и Swift — это дословное
+содержимое `Sources/CadenceMotion/Disintegrate.metal` и
+`Sources/CadenceMotion/DisintegrateEffect.swift`: они собираются Xcode 26.5,
+устанавливаются на симулятор iPhone 17 Pro (iOS 26.5) и дают на экране
+распад, снятый покадрово (см. раздел 5, «Что показали кадры»). Туда же
+уехали правки, которых черновик не предвидел, — они помечены по тексту.
+Утверждения раздела 3 про `ShaderLibrary.bundle(.module)` и `Bundle.module`
+подтвердились; одно предсказание раздела 3 не подтвердилось (про
+`resources:` в `Package.swift`), и оно переписано по факту.
+
+**Разделы 1, 2, 4 и 6 остаются непроверенными в тех частях, которые не
+понадобились для `disintegrate`.** Из раздела 4 вживую собраны сигнатура
+`layerEffect` и фабрики `.float(_:)` и `.float2(_:)`; `colorEffect`,
+`distortionEffect` и `.color(_:)` в этом заходе не компилировались ни разу.
+Параметр `isEnabled:` у `layerEffect` — подтверждён, он есть и используется.
+Из раздела 6 подтверждено только то, что предварительная проверка через
+`MTLLibrary.makeFunction(name:)` работает и ничего не стоит; сам крэш при
+неверной библиотеке воспроизвести не пытались. Совет раздела 2 «выставить
+`maxSampleOffset` равным `maxOffset`» на практике оказался слишком узким —
+поправка в разделе 5.
 
 Отдельная методическая оговорка: страницы `developer.apple.com` рендерятся
 JavaScript'ом, и автоматический доступ к ним (в том числе тот, которым
@@ -103,9 +114,12 @@ SwiftUI даёт три способа применить Metal-шейдер к 
 максимального смещения, которое шейдер производит **в худшем случае за всё
 время анимации**, а не в среднем и не в начальный момент. Для `disintegrate`
 это ровно тот параметр `maxOffset`, что передаётся в сам шейдер как верхняя
-граница разлёта (раздел 5) — значение должно совпадать с тем, что уходит в
-`maxSampleOffset`, иначе получится тот же обрезанный край при частицах,
-долетевших до предельного смещения. Слишком большой запас с той же
+граница разлёта (раздел 5) — но совпадать эти два числа не обязаны, и в
+реализации не совпадают: `maxSampleOffset` обязан покрывать **полное**
+смещение сэмпла, а к разлёту там добавляется ещё и поворот осколка вокруг
+своей оси (раздел 5, пункт 4 в «Чем это отличается от черновика»). Занизить
+его — получить тот же обрезанный край при кусках, долетевших до предельного
+смещения. Слишком большой запас с той же
 проблемой не связан, но не бесплатен: чем больше буфер, тем больше пикселей
 Metal обязан обработать, даже если на практике эффект туда не дотягивается
 (подробнее о цене — раздел 6).
@@ -134,8 +148,45 @@ ShaderLibrary.bundle(.module).disintegrate(/* ... */)
 `ShaderFunction(library:name:)` — там `library` явно принимает
 `.bundle(.module)` вместо `.default`.
 
-Почему эта ошибка так легко проходит незамеченной — это не один факт, а
-совпадение нескольких:
+### Что `Package.swift` для этого нужно (проверено)
+
+**Ничего.** Это главная поправка к черновику: ожидалось, что `.metal` в
+Swift-таргете придётся объявлять как ресурс (`resources: [.process(...)]`)
+или что SwiftPM выругается «found unhandled file». Ни того, ни другого не
+случилось. При `swift-tools-version: 6.3` достаточно положить
+`Disintegrate.metal` рядом со Swift-файлами таргета `CadenceMotion` и не
+трогать манифест вообще: Xcode сам заводит служебный таргет-бандл
+`Cadence_CadenceMotion`, сам генерирует `resource_bundle_accessor.swift`
+(то есть `Bundle.module` появляется без единой строки в манифесте) и сам
+прогоняет две фазы — `CompileMetalFile` и `MetalLink`. Итог сборки:
+
+```
+Cadence_CadenceMotion.bundle/
+    default.metallib          ← сюда попал скомпилированный шейдер
+    Info.plist
+```
+
+и этот бандл лежит внутри `Catalog.app`. Имя файла — ровно
+`default.metallib`, поэтому и `ShaderLibrary.bundle(.module)`, и
+`MTLDevice.makeDefaultLibrary(bundle:)` находят его без дополнительных
+указаний. Объявлять `.metal` ресурсом не нужно и, скорее всего, вредно:
+`.process` для него — это правило копирования, а не компиляции.
+
+Зато нашлась ловушка, которой черновик не знал: **в Xcode 26 Metal-тулчейн
+не входит в поставку и ставится отдельно.** До установки сборка падает с
+
+```
+error: cannot execute tool 'metal' due to missing Metal Toolchain;
+use: xcodebuild -downloadComponent MetalToolchain
+```
+
+Это громкий и понятный отказ (688 МБ загрузки, одна команда), но на чистой
+машине он остановит сборку пакета с шейдером, и к самому коду шейдера
+отношения не имеет.
+
+### Почему ошибка с библиотекой проходит незамеченной
+
+Это не один факт, а совпадение нескольких:
 
 1. **Сборка через `xcodebuild`/Xcode нужна, а не факультативна.** Есть
    свидетельства (Swift Package Manager issue, форумы Apple Developer), что
@@ -247,61 +298,181 @@ ShaderLibrary.bundle(.module).disintegrate(/* ... */)
 Порядок вызова в Swift и порядок хвостовых параметров в Metal — один и тот
 же, позиционно, без именования.
 
-Известные фабрики `Shader.Argument`, подтверждённые в проверенных примерах:
-`.float(_:)`, `.float2(_:)`, `.color(_:)`. Существование `.float3`, `.float4`,
-`.image(_:)`, `.data(_:)` в этом заходе не перепроверялось отдельно — они
-приведены по памяти и не должны считаться подтверждёнными, пока не
-использованы и не собраны хотя бы раз. Параметр `isEnabled: Bool` у всех
-трёх модификаторов также приводится по памяти (в источниках, которые
-удалось прочитать, он не встретился ни разу вживую) — при реализации нужно
-свериться с автодополнением Xcode, а не с этим документом.
+Фабрики `Shader.Argument`, собранные вживую при реализации `disintegrate`:
+`.float(_:)` и `.float2(_:)` — причём `.float2` принимает `CGSize` напрямую,
+без ручной распаковки в пару `Float`, и ложится в Metal как `float2`.
+`.color(_:)` в этом заходе не компилировалась; существование `.float3`,
+`.float4`, `.image(_:)`, `.data(_:)` по-прежнему не перепроверялось и
+приведено по памяти.
 
-## 5. Как устроен `disintegrate`
+Параметр `isEnabled: Bool` у `layerEffect` — **подтверждён**: он есть,
+компилируется и используется в реализации, чтобы снимать эффект целиком в
+покое. У `colorEffect` и `distortionEffect` по-прежнему по памяти.
+
+## 5. Как устроен `disintegrate` (проверено)
 
 Формулировка из спеки (раздел 6, дословно): `layerEffect` с Metal-шейдером,
 где выходной пиксель сэмплирует слой со смещением, заданным шумом и
 прогрессом; альфа гасится по порогу шума; `maxSampleOffset` даёт запас кадра
 под разлёт.
 
-Разбирая по частям:
+**Буквальное прочтение этой формулировки было реализовано первым и
+выброшено.** Порог на пиксель по шуму даёт технически корректный распад, но
+визуально это равномерная дымка: пиксели уходят поодиночке, и глаз читает не
+разрушение, а зернистое затухание. Ниже — то, что осталось после переделки;
+разница между двумя версиями и есть главное содержание этого раздела.
 
-- **Шум даёт каждому пикселю собственный порог разрушения.** Без шума весь
-  эффект превратился бы в линейную протирку слева направо или сверху вниз
-  — узнаваемо, но не похоже на распад. Дешёвый детерминированный хэш от
-  позиции пикселя (`fract(sin(dot(uv, k)) * large_const)`) даёт
-  псевдослучайное число на пиксель, стабильное между кадрами (тот же пиксель
-  — то же число), но без видимой периодичности при разумном масштабе `uv`.
-- **Прогресс — один float, растущий от 0 до 1** за время эффекта. Пиксель
-  «пересекает» свой порог в момент, когда `progress > noise` для этого
-  пикселя. Чем больше пикселей с низким `noise`, тем раньше они уходят —
-  эффект стартует с разреженных вспышек по всей поверхности, а не с
-  единой границы.
-- **Смещение при сэмплировании — то, что делает уход визуально распадом, а
-  не просто исчезновением.** Вместо `layer.sample(position)` пиксель,
-  прошедший порог, сэмплирует `layer.sample(position + offset)`, где
-  `offset` растёт вместе с тем, насколько давно этот пиксель пересёк
-  порог, и с амплитудой `maxOffset`. Так уходящий пиксель как будто тянет
-  соседний кусок картинки за собой — драфт, а не чистое затухание на месте.
-- **Альфа гасится плавно вокруг порога**, а не бинарно, — иначе край между
-  «ещё не начал распадаться» и «уже пропал» был бы резкой границей, что
-  для взрыва/распада читается неестественно жёстко. `smoothstep` по узкой
-  полосе вокруг порога даёт мягкий, но короткий переход.
+### Что оказалось важно
 
-Ниже — рабочая гипотеза реализации (см. предупреждение в начале файла: не
-скомпилировано).
+- **Единица распада — не пиксель, а осколок.** Слой режется на неправильные
+  многоугольники, и все пиксели одного осколка двигаются одинаково: общее
+  смещение, общий угол поворота, общая альфа. Ровно это превращает картинку
+  из шума в набор форм. Если единица — пиксель, никакая настройка амплитуд и
+  задержек формы не создаст.
+- **Разбиение — взвешенная диаграмма Вороного по решётке со сдвинутыми
+  узлами.** Просто решётка читается как плитка. Вороной по решётке, где узел
+  случайно сдвинут внутри своей клетки, даёт неправильные многоугольники —
+  но все примерно одного размера, а одинаковые куски читаются как процедура.
+  Аддитивный вес на узел (вычитается из расстояния) ломает и это: узел с
+  большим весом отхватывает площадь у соседей, и осколки выходят разного
+  размера. Вес ограничен половиной клетки — тогда трёх-на-три соседей
+  гарантированно хватает, чтобы найти победителя.
+- **Разрешать принадлежность осколка приходится в обратную сторону.** Это
+  главная неочевидность. Наивно: взять осколок под выходным пикселем,
+  сместить сэмпл — но тогда область, в которой осколок рисуется, остаётся
+  стоять на месте, а внутри неё ездит картинка. Получается не разлёт кусков,
+  а плитки с бегущим содержимым. Правильный вопрос — «какой осколок после
+  своего преобразования накрывает этот пиксель», а это поиск по всем
+  кандидатам в радиусе максимального смещения (при 90 pt разлёта и клетке
+  22 pt — сотня с лишним лукапов на пиксель). Вместо перебора работает поиск
+  неподвижной точки: взять осколок под пикселем, откатить его движение,
+  посмотреть, какой осколок оказался в этой точке, повторить. Соседи летят
+  похоже, поэтому сходится за три-четыре шага. Если после итераций точка так
+  и не попала в собственную клетку осколка — над пикселем осколка нет, и
+  туда возвращается прозрачность. **Эти «несошедшиеся» пиксели и есть
+  просветы между летящими кусками** — без них эффект снова превращается в
+  сплошное поле.
+- **Альфа обязана отставать от движения.** Если кусок начинает гаснуть в
+  момент отрыва, он исчезает раньше, чем успевает улететь, и вся работа с
+  жёсткими телами не видна. `smoothstep(0.4, 1.0, life)` — то есть первые
+  40% собственной жизни осколок летит непрозрачным.
+- **Волна отрыва важнее, чем кажется.** Старт каждого осколка складывается
+  из позиции (по диагонали от нижнего левого угла) и случайной добавки.
+  Чисто случайные старты дают «всё осыпалось разом», чисто позиционные —
+  прямую линию реза.
+- **Хэш без синуса.** Шейдер считает хэш сотни раз на пиксель (девять узлов
+  на лукап, пять лукапов на пиксель), поэтому привычный
+  `fract(sin(dot(p, k)) * 43758.5453)` кладёт синус во внутренний цикл без
+  всякой нужды. Заменено на хэш Хоскинса на `fract` и умножениях.
+
+### Metal
+
+Дословно `Sources/CadenceMotion/Disintegrate.metal`:
 
 ```metal
-// Sources/CadenceMotion/Disintegrate.metal
 #include <metal_stdlib>
 #include <SwiftUI/SwiftUI_Metal.h>
+
 using namespace metal;
 
-// Cheap deterministic hash: same pixel always yields the same value across
-// frames, with no visible periodicity at the cell scale used below. Good
-// enough for a one-shot destruction effect; not a general-purpose noise
-// function for anything that needs to look organic under close inspection.
-inline float hashNoise(float2 p) {
-    return fract(sin(dot(p, float2(12.9898, 78.233))) * 43758.5453);
+inline float hash11(float2 p) {
+    float3 p3 = fract(float3(p.x, p.y, p.x) * 0.1031);
+    p3 += dot(p3, float3(p3.y, p3.z, p3.x) + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+inline float2 hash21(float2 p) {
+    float3 p3 = fract(float3(p.x, p.y, p.x) * float3(0.1031, 0.1030, 0.0973));
+    p3 += dot(p3, float3(p3.y, p3.z, p3.x) + 33.33);
+    return fract((float2(p3.x, p3.x) + float2(p3.y, p3.z)) * float2(p3.z, p3.y));
+}
+
+// Номинальный размер осколка в точках. Реальные куски крупнее и мельче
+// за счёт веса ниже.
+constant float kCellSize = 22.0;
+
+// Насколько узел может отодвинуть собственную границу наружу, в долях
+// клетки. Это и делает куски разного размера.
+constant float kWeightRange = 0.45;
+
+struct Shard {
+    float2 id;      // клетка решётки — идентичность осколка
+    float2 center;  // сам узел, в точках; он же ось вращения
+    float dist;
+};
+
+inline Shard nearestShard(float2 p) {
+    float2 g = floor(p / kCellSize);
+
+    Shard best;
+    best.dist = 1e9;
+    best.id = g;
+    best.center = p;
+
+    for (int dy = -1; dy <= 1; ++dy) {
+        for (int dx = -1; dx <= 1; ++dx) {
+            float2 n = g + float2(dx, dy);
+            float2 site = (n + hash21(n)) * kCellSize;
+            float weight = hash11(n + float2(41.7, 17.3)) * kWeightRange * kCellSize;
+            float d = distance(p, site) - weight;
+            if (d < best.dist) {
+                best.dist = d;
+                best.id = n;
+                best.center = site;
+            }
+        }
+    }
+    return best;
+}
+
+struct Motion {
+    float2 displacement;
+    float angle;
+    float alpha;
+};
+
+inline Motion shardMotion(float2 id, float2 center, float2 size, float progress, float maxOffset) {
+    float2 ra = hash21(id + float2(1.7, 9.2));   // джиттер старта, длительность
+    float2 rb = hash21(id + float2(4.3, 2.8));   // угол разброса, скорость
+    float spin = hash11(id + float2(7.1, 5.9));
+
+    float2 uv = center / max(size, float2(1.0));
+    float sweep = 0.75 * uv.x + 0.25 * (1.0 - uv.y);
+    float start = (0.6 * sweep + 0.4 * ra.x) * 0.55;
+    float span = 0.42 + 0.26 * ra.y;
+
+    float life = clamp((progress - start) / span, 0.0, 1.0);
+
+    Motion m;
+    m.displacement = float2(0.0);
+    m.angle = 0.0;
+    m.alpha = 1.0;
+    if (life <= 0.0) {
+        return m;
+    }
+
+    float move = 1.0 - pow(1.0 - life, 3.0);
+
+    float2 outward = center - size * 0.5;
+    outward = outward / max(length(outward), 1.0);
+    float scatterAngle = rb.x * 6.28318530718;
+    float2 dir = outward * 0.7 + float2(cos(scatterAngle), sin(scatterAngle)) * 0.45 + float2(0.0, -0.9);
+    dir = dir / max(length(dir), 1e-4);
+
+    float speed = 0.4 + 0.85 * rb.y;
+    m.displacement = dir * move * maxOffset * speed;
+    m.angle = (spin - 0.5) * 2.4 * move;
+    m.alpha = 1.0 - smoothstep(0.4, 1.0, life);
+
+    return m;
+}
+
+inline float2 inverseTransform(float2 position, Shard shard, Motion motion) {
+    float ca = cos(-motion.angle);
+    float sa = sin(-motion.angle);
+    float2 local = position - shard.center - motion.displacement;
+    return shard.center + float2(local.x * ca - local.y * sa,
+                                 local.x * sa + local.y * ca);
 }
 
 [[ stitchable ]]
@@ -312,113 +483,186 @@ half4 disintegrate(
     float progress,
     float maxOffset
 ) {
-    float2 uv = position / size;
-
-    // Per-pixel destruction threshold: how far `progress` has to advance
-    // before this exact pixel starts leaving.
-    float threshold = hashNoise(uv * 40.0);
-
-    if (progress <= threshold) {
-        // Not reached yet: pixel is untouched.
+    if (progress <= 0.0) {
         return layer.sample(position);
     }
 
-    float sinceThreshold = progress - threshold;
+    Shard shard = nearestShard(position);
+    Motion motion = shardMotion(shard.id, shard.center, size, progress, maxOffset);
+    float2 source = inverseTransform(position, shard, motion);
 
-    // A second, independent hash seeds a pseudo-random drift direction per
-    // pixel, so pixels do not all scatter the same way — closer to dust
-    // than to a uniform wipe.
-    float angle = hashNoise(uv * 40.0 + float2(7.0, 3.0)) * 6.28318530718;
-    float2 direction = float2(cos(angle), sin(angle));
-    float2 offset = direction * sinceThreshold * maxOffset;
+    for (int i = 0; i < 4; ++i) {
+        Shard next = nearestShard(source);
+        if (all(next.id == shard.id)) {
+            break;
+        }
+        shard = next;
+        motion = shardMotion(shard.id, shard.center, size, progress, maxOffset);
+        source = inverseTransform(position, shard, motion);
+    }
 
-    half4 color = layer.sample(position + offset);
+    Shard settled = nearestShard(source);
+    if (!all(settled.id == shard.id)) {
+        return half4(0.0);
+    }
 
-    // Fade out over a narrow band right after the threshold is crossed,
-    // rather than vanishing instantly — smoothstep, not a hard cut.
-    float edge = 0.12;
-    float alpha = 1.0 - smoothstep(0.0, edge, sinceThreshold);
-    color.a *= half(alpha);
-
-    return color;
+    return layer.sample(source) * half(motion.alpha);
 }
 ```
 
-Со стороны Swift прогресс должен анимироваться самой SwiftUI-анимацией, а не
-таймером, который вручную дёргает `@State` каждый кадр — иначе теряется
-всё, что даёт `MotionSpec` (кривая, длительность, связь с Reduce Motion).
-Стандартный механизм для этого — `Animatable`: модификатор объявляет
-`animatableData`, и SwiftUI сама интерполирует значение между кадрами
-транзакции, вызванной `withAnimation`.
+Комментарии в файле приведены в сокращении — полный текст в самом
+`Disintegrate.metal`.
+
+### Swift
+
+Дословно `Sources/CadenceMotion/DisintegrateEffect.swift` (комментарии
+сокращены):
 
 ```swift
-// Sources/CadenceMotion/DisintegrateEffect.swift
+import Metal
+import OSLog
 import SwiftUI
 
-/// Draws the current frame of the disintegrate shader at a given progress.
-/// `Animatable` so that `withAnimation` interpolates `progress` frame by
-/// frame instead of jumping straight to the end value.
-struct DisintegrateEffect: ViewModifier, Animatable {
-    var progress: Double
-    let maxOffset: CGFloat
+enum DisintegrateShader {
+    private static let log = Logger(subsystem: "Cadence", category: "motion")
 
-    var animatableData: Double {
-        get { progress }
-        set { progress = newValue }
+    static let functionName = "disintegrate"
+    static let maxOffset: CGFloat = 90
+    static let sampleOffset = CGSize(width: 130, height: 130)
+
+    /// Резолвится ли функция шейдера. Лениво и ровно один раз.
+    static let isAvailable: Bool = resolveFunction()
+
+    private static func resolveFunction() -> Bool {
+        guard let device = MTLCreateSystemDefaultDevice() else {
+            log.notice("Metal device unavailable, disintegrate degrades to a cross-fade")
+            return false
+        }
+
+        let library: any MTLLibrary
+        do {
+            library = try device.makeDefaultLibrary(bundle: .module)
+        } catch {
+            assertionFailure("Cadence: no default.metallib in the CadenceMotion bundle …")
+            log.error("No default.metallib in the CadenceMotion bundle …")
+            return false
+        }
+
+        guard library.makeFunction(name: functionName) != nil else {
+            assertionFailure("Cadence: Metal function \(functionName) is missing …")
+            log.error("Metal function \(functionName, privacy: .public) is missing …")
+            return false
+        }
+
+        return true
     }
+}
+
+private struct DisintegrateFrame: ViewModifier {
+    let progress: Double
 
     func body(content: Content) -> some View {
-        content.visualEffect { view, proxy in
-            view.layerEffect(
-                ShaderLibrary.bundle(.module).disintegrate(
-                    .float2(proxy.size),
-                    .float(Float(progress)),
-                    .float(Float(maxOffset))
-                ),
-                // Must match `maxOffset` above: this is exactly the
-                // "how far can this shader move a pixel" bound from
-                // section 2, not a separate number to tune independently.
-                maxSampleOffset: CGSize(width: maxOffset, height: maxOffset)
-            )
+        if DisintegrateShader.isAvailable {
+            content.visualEffect { view, proxy in
+                view.layerEffect(
+                    ShaderLibrary.bundle(.module).disintegrate(
+                        .float2(proxy.size),
+                        .float(Float(progress)),
+                        .float(Float(DisintegrateShader.maxOffset))
+                    ),
+                    maxSampleOffset: DisintegrateShader.sampleOffset,
+                    isEnabled: progress > 0
+                )
+            }
+        } else {
+            content.opacity(1 - progress)
         }
     }
 }
 
-/// Drives `DisintegrateEffect.progress` from a `MotionSpec`, converting the
-/// spec's curve and duration into a SwiftUI `Animation` rather than
-/// hardcoding either here.
-struct DisintegrateTrigger: ViewModifier {
-    let isDestroyed: Bool
-    let spec: MotionSpec
-    let maxOffset: CGFloat
-
-    @State private var progress: Double = 0
+struct DisintegratePulseModifier: ViewModifier {
+    let duration: TimeInterval
+    let pulse: Int
 
     func body(content: Content) -> some View {
-        content
-            .modifier(DisintegrateEffect(progress: progress, maxOffset: maxOffset))
-            .onChange(of: isDestroyed) { _, destroyed in
-                guard destroyed else { return }
-                withAnimation(spec.animation) {
-                    progress = 1
-                }
+        content.keyframeAnimator(initialValue: 0.0, trigger: pulse) { view, progress in
+            view.modifier(DisintegrateFrame(progress: progress))
+        } keyframes: { _ in
+            KeyframeTrack(\.self) {
+                LinearKeyframe(1.0, duration: duration)
             }
+        }
     }
 }
 ```
 
-`spec.animation` здесь — та самая `MotionSpec -> Animation` конверсия,
-которую задача 7 плана (`Sources/CadenceMotion/MotionSpec+Animation.swift`)
-уже вводит для модификаторного семейства `MotionKind`; `disintegrate` в
-`MotionKind` — отдельный кейс именно потому, что требует шейдера, а не
-переиспользует эту анимацию бесплатно (см. классификацию в задаче 7 плана:
-модификаторное семейство против видового, `disintegrate` вынесен в «второй
-план» отдельно от обоих). Практически это означает, что связка
-`MotionSpec` → `Animation` для `disintegrate` пройдёт через тот же путь, но
-конкретный `ViewModifier`, который её потребляет, — не общий
-`CadenceMotionModifier`, а специализированный `DisintegrateTrigger` выше,
-потому что видовая часть (сам шейдер, а не то, что двигать) не выражается
-через общий модификаторный путь.
+Точный вызов, который сработал, — один в один как предсказывал раздел 3:
+
+```swift
+ShaderLibrary.bundle(.module).disintegrate(/* аргументы */)
+```
+
+### Чем это отличается от черновика
+
+Что из черновика устояло: `layerEffect` вместо `colorEffect`,
+`[[ stitchable ]]`, `#include <SwiftUI/SwiftUI_Metal.h>`, порядок
+обязательных параметров `(position, layer, …)`, позиционный маппинг хвостовых
+аргументов, `ShaderLibrary.bundle(.module)`, `maxSampleOffset` как запас
+буфера.
+
+Что не устояло:
+
+1. **Шум на пиксель заменён на осколки.** См. выше — это не тюнинг, а другая
+   конструкция.
+2. **`Animatable` не понадобился.** Черновик предлагал `ViewModifier` с
+   `animatableData` и `withAnimation`. На деле прогресс гонит
+   `keyframeAnimator(initialValue:trigger:)` — тот же разовый прогон, что
+   у `.scale` и `.shake` в `CadenceMotionModifier`, и никакой отдельной
+   механики для `disintegrate` не потребовалось.
+3. **Кривая снаружи убрана.** Черновик тащил `spec.animation` внутрь.
+   Прогресс идёт строго линейно: вся мягкость живёт внутри шейдера, где у
+   каждого осколка своя ease-out на смещении и своя, отстающая, на альфе.
+   Кривая снаружи наложилась бы вторым слоем и сбила бы волну отрыва.
+4. **`maxSampleOffset` больше, чем `maxOffset`** (130 против 90), а не равен
+   ему, как советовал раздел 2. Причина: осколок ещё и вращается вокруг
+   своего узла, и точка на его краю уезжает дальше, чем центр. Правило
+   раздела 2 верное, но формулировка «должен совпадать с `maxOffset`» —
+   слишком узкая: совпадать он должен с полным смещением сэмпла, а поворот
+   в это смещение входит.
+5. **Знак смещения.** Сэмплировать надо `position - drift`, а не
+   `position + drift`: выходной пиксель берёт цвет оттуда, *откуда* кусок
+   прилетел. С плюсом эффект работает и выглядит правдоподобно, но куски
+   летят в противоположную сторону от задуманной — ошибка, которую не видно,
+   пока направление не привязано к чему-то осмысленному.
+6. **Премультиплицированная альфа.** Черновик умножал только `color.a`.
+   `layer.sample` возвращает премультиплицированный цвет, поэтому множить
+   надо весь `half4`, иначе rgb остаётся слишком ярким и куски светятся,
+   пока гаснут.
+7. **Длительность поднята с 900 до 1200 мс** (`resolve(.destroyed, in:)`).
+   На 900 мс осколки успевают оторваться, но не долететь: волна отрыва
+   сливается с разлётом в одну смазанную вспышку. Основание прежнее —
+   эстетическое, грейд D.
+
+### Что показали кадры
+
+Проверка — не сборка, а покадровая съёмка на симуляторе iPhone 17 Pro
+(iOS 26.5): запись `xcrun simctl io booted recordVideo`, кадры вырезаны
+`ffmpeg` с частотой 15 к/с. Анимация занимает ровно 18 кадров — 1.2 с,
+как в плане.
+
+- ~200 мс: левая треть карточки уже разошлась на многоугольники с просветами
+  между ними, правая ещё цела и нетронута — волна отрыва видна прямо на
+  кадре.
+- ~400 мс: вся карточка — отдельные куски разного размера, с чёрными
+  просветами, часть уже развёрнута под углом к исходной ориентации.
+- ~600 мс: куски разлетелись за границы карточки вверх и в стороны, середина
+  опустела (направление «наружу от центра» расходящееся), альфа ещё почти
+  полная.
+- ~900–1100 мс: остатки бледнеют на периферии и гаснут.
+
+Это тот тест, который отличает работающий шейдер от молчащего: молчащий
+оставил бы вью либо целой, либо мгновенно пустой — промежуточных состояний
+с формами и просветами не было бы ни на одном кадре.
 
 ## 6. Отладка и цена
 
