@@ -261,7 +261,7 @@ public enum RoutineInteraction: Sendable {
 
 public enum SignatureInteraction: Sendable {
     case destroyed
-    case summoned(from: Edge)
+    case summoned(from: ScreenCorner)   // угол, не ребро: эффект привязан к радиусу угла
 }
 ```
 
