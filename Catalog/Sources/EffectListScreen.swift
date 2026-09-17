@@ -23,8 +23,12 @@ struct EffectListScreen: View {
                     NavigationLink("validationFailure") { ValidationFailureScreen() }
                 }
 
+                Section("Signature — explicit opt-in only") {
+                    NavigationLink("disintegrate") { DisintegrateScreen() }
+                }
+
                 Section("Not yet built") {
-                    Text("These effects are planned but not yet in the package: the Thanos snap and corner emergence.")
+                    Text("This effect is planned but not yet in the package: corner emergence.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
