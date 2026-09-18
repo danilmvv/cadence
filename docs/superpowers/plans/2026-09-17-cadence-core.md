@@ -2326,7 +2326,7 @@ git commit -m "Каталог: четыре эффекта, тумблеры д�
 
 1. **Видовое семейство:** `CadenceSkeleton`, `CadenceProgress`, `CadenceSuccessMark` — виды, которые Cadence рисует сам. Закрывает `waiting` и `taskSucceeded`.
 2. **`disintegrate`:** Metal-шейдер в SPM, `layerEffect`, `maxSampleOffset`, тест загрузки через `ShaderLibrary.bundle(.module)`.
-3. **`cornerEmergence`:** `concentricCornerRadii(in:)`, `ConcentricRectangle`, `GlassEffectContainer` с `glassEffectID`.
+3. **`cornerEmergence`:** `GeometryProxy.containerCornerInsets`, `ConcentricRectangle`, `GlassEffectContainer` с `glassEffectID` (все три — из `SwiftUICore`).
 4. **Каталог:** экраны signature-эффектов с антипримерами.
 5. **README и DocC:** двусторонние ссылки между символами API и файлами ресерча.
 

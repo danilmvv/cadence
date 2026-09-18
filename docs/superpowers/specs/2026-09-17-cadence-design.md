@@ -237,7 +237,7 @@ CoreHaptics-паттерн с затухающей continuous-фазой.
 
 **`cornerEmergence`** (`.journey`, ~450 мс — превышение бюджета осознанное) — выход
 элемента из угла экрана. Реальный радиус угла
-устройства берётся через `concentricCornerRadii(in:)` в `onGeometryChange`,
+устройства берётся через `GeometryProxy.containerCornerInsets` в `onGeometryChange`,
 форма — `ConcentricRectangle`, морфинг — `GlassEffectContainer` с `glassEffectID`
 в общем `@Namespace`. ~450 мс.
 Уместно: статусные уведомления системного вида, индикаторы фоновых процессов.
