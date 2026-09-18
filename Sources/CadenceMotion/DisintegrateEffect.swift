@@ -25,7 +25,10 @@ enum DisintegrateShader {
     /// вращается вокруг своего центра: точка на его краю уезжает дальше, чем
     /// сам центр. Не хватит запаса — дальние куски обрежет по границе вью,
     /// и это не даст ни ошибки, ни предупреждения.
-    static let sampleOffset = CGSize(width: 130, height: 130)
+    static func sampleOffset(for drift: Double) -> CGSize {
+        let side = 130 * max(drift, 1)
+        return CGSize(width: side, height: side)
+    }
 
     /// Резолвится ли функция шейдера в Metal-библиотеке этого таргета.
     ///
@@ -81,8 +84,55 @@ enum DisintegrateShader {
 /// стороне от себя, а `colorEffect` соседних пикселей не видит в принципе.
 /// И не `distortionEffect`: тот возвращает позицию источника, а не цвет, и
 /// затухание альфы через него не выражается.
-private struct DisintegrateFrame: ViewModifier {
+/// Визуальный характер распада.
+///
+/// Эти числа НЕ выводятся из ресерча — в корпусе сам эффект стоит на грейде D,
+/// то есть признан эстетическим решением. Именно поэтому они вынесены в
+/// настраиваемую структуру, а длительность — нет: длительность приходит из
+/// резолвера и governed порогами восприятия.
+///
+/// `drift` не «скорость анимации»: время распада задаёт резолвер. Это
+/// дальность разлёта осколка за то же самое время.
+public struct DisintegrationTuning: Sendable, Equatable {
+    /// Номинальный размер осколка в точках. Меньше — больше кусков.
+    public var shardSize: Double
+    /// Разброс размеров, 0...1. На нуле все куски одинаковые и читаются
+    /// как алгоритм, а не как разрушение.
+    public var sizeVariation: Double
+    /// Дальность разлёта. 1.0 — базовая.
+    public var drift: Double
+    /// Насколько направление осколка случайно, 0...1. На нуле все летят
+    /// строго от центра наружу.
+    public var scatter: Double
+    /// Величина поворота осколка вокруг своей оси.
+    public var spin: Double
+    /// 1 — отрыв идёт чистой волной по карточке; 0 — каждый осколок
+    /// выбирает момент сам, и карточка просто осыпается.
+    public var sweep: Double
+
+    public init(
+        shardSize: Double = 22,
+        sizeVariation: Double = 0.45,
+        drift: Double = 1,
+        scatter: Double = 0.45,
+        spin: Double = 2.4,
+        sweep: Double = 0.6
+    ) {
+        self.shardSize = shardSize
+        self.sizeVariation = sizeVariation
+        self.drift = drift
+        self.scatter = scatter
+        self.spin = spin
+        self.sweep = sweep
+    }
+
+    /// Значения, с которыми эффект принимался в тулкит.
+    public static let standard = DisintegrationTuning()
+}
+
+struct DisintegrateFrame: ViewModifier {
     let progress: Double
+    var tuning: DisintegrationTuning = .standard
 
     func body(content: Content) -> some View {
         if DisintegrateShader.isAvailable {
@@ -96,9 +146,18 @@ private struct DisintegrateFrame: ViewModifier {
                     ShaderLibrary.bundle(.module).disintegrate(
                         .float2(proxy.size),
                         .float(Float(progress)),
-                        .float(Float(DisintegrateShader.maxOffset))
+                        .float(Float(DisintegrateShader.maxOffset)),
+                        .float(Float(tuning.shardSize)),
+                        .float(Float(tuning.sizeVariation)),
+                        .float(Float(tuning.drift)),
+                        .float(Float(tuning.scatter)),
+                        .float(Float(tuning.spin)),
+                        .float(Float(tuning.sweep))
                     ),
-                    maxSampleOffset: DisintegrateShader.sampleOffset,
+                    // Запас кадра растёт вместе с дальностью: занизить его —
+                    // получить осколки, обрезанные по границе вью, без
+                    // единого предупреждения.
+                    maxSampleOffset: DisintegrateShader.sampleOffset(for: tuning.drift),
                     // В покое эффект снят целиком: `layerEffect` заставляет
                     // SwiftUI рисовать поддерево в отдельный буфер, и платить
                     // за это, пока ничего не происходит, незачем.
@@ -180,9 +239,11 @@ struct ReassemblePulseModifier: ViewModifier {
 /// устойчивых состояния, между которыми ходят в обе стороны.
 public struct DisintegrationState: ViewModifier, @preconcurrency Animatable {
     public var progress: Double
+    public var tuning: DisintegrationTuning
 
-    public init(progress: Double) {
+    public init(progress: Double, tuning: DisintegrationTuning = .standard) {
         self.progress = progress
+        self.tuning = tuning
     }
 
     public var animatableData: Double {
@@ -191,6 +252,6 @@ public struct DisintegrationState: ViewModifier, @preconcurrency Animatable {
     }
 
     public func body(content: Content) -> some View {
-        content.modifier(DisintegrateFrame(progress: progress))
+        content.modifier(DisintegrateFrame(progress: progress, tuning: tuning))
     }
 }

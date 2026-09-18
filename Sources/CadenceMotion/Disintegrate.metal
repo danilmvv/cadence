@@ -24,15 +24,10 @@ inline float2 hash21(float2 p) {
 
 // MARK: - Partition
 
-// Nominal shard size in points. The actual pieces are larger and smaller than
-// this because of the per-site weight below.
-constant float kCellSize = 22.0;
-
-// How far a site may push its own boundary outwards, as a fraction of the
-// cell. This is the whole reason the pieces come out in different sizes: a
-// plain Voronoi over a jittered grid gives cells that are irregular in shape
-// but all roughly one size, and uniform pieces read as procedural.
-constant float kWeightRange = 0.45;
+// Nominal shard size and size spread used to come in as constants. They are
+// arguments now: the visual character of the break-up is taste, not evidence
+// (grade D in docs/research), and taste belongs on a slider rather than
+// frozen into the shader.
 
 struct Shard {
     float2 id;      // grid cell of the winning site — the shard's identity
@@ -46,8 +41,8 @@ struct Shard {
 /// the boundaries irregular polygons, and the weight makes the polygons
 /// different sizes. Three-by-three is enough because a weight can never move
 /// a boundary by more than half a cell.
-inline Shard nearestShard(float2 p) {
-    float2 g = floor(p / kCellSize);
+inline Shard nearestShard(float2 p, float cellSize, float weightRange) {
+    float2 g = floor(p / cellSize);
 
     Shard best;
     best.dist = 1e9;
@@ -57,8 +52,8 @@ inline Shard nearestShard(float2 p) {
     for (int dy = -1; dy <= 1; ++dy) {
         for (int dx = -1; dx <= 1; ++dx) {
             float2 n = g + float2(dx, dy);
-            float2 site = (n + hash21(n)) * kCellSize;
-            float weight = hash11(n + float2(41.7, 17.3)) * kWeightRange * kCellSize;
+            float2 site = (n + hash21(n)) * cellSize;
+            float weight = hash11(n + float2(41.7, 17.3)) * weightRange * cellSize;
             float d = distance(p, site) - weight;
             if (d < best.dist) {
                 best.dist = d;
@@ -81,10 +76,12 @@ struct Motion {
 /// Everything about how one shard leaves, derived from a hash of its cell id
 /// so that every pixel of the shard computes the identical answer. That is
 /// what makes the piece move as a rigid body instead of as noise.
-inline Motion shardMotion(float2 id, float2 center, float2 size, float progress, float maxOffset) {
+inline Motion shardMotion(float2 id, float2 center, float2 size, float progress,
+                          float maxOffset, float drift, float scatter,
+                          float spinAmount, float sweepBias) {
     float2 ra = hash21(id + float2(1.7, 9.2));   // start jitter, span
     float2 rb = hash21(id + float2(4.3, 2.8));   // scatter angle, speed
-    float spin = hash11(id + float2(7.1, 5.9));
+    float spinHash = hash11(id + float2(7.1, 5.9));
 
     // The breakup sweeps diagonally from the bottom-left corner instead of
     // every piece leaving at once: mostly horizontal, with a quarter of the
@@ -92,7 +89,9 @@ inline Motion shardMotion(float2 id, float2 center, float2 size, float progress,
     // curtain. The random quarter keeps the line from being a straight edge.
     float2 uv = center / max(size, float2(1.0));
     float sweep = 0.75 * uv.x + 0.25 * (1.0 - uv.y);
-    float start = (0.6 * sweep + 0.4 * ra.x) * 0.55;
+    // sweepBias = 1 -> a clean wave across the card; 0 -> every shard picks
+    // its own moment and the card simply crumbles.
+    float start = (sweepBias * sweep + (1.0 - sweepBias) * ra.x) * 0.55;
     float span = 0.42 + 0.26 * ra.y;
 
     float life = clamp((progress - start) / span, 0.0, 1.0);
@@ -115,14 +114,14 @@ inline Motion shardMotion(float2 id, float2 center, float2 size, float progress,
     float2 outward = center - size * 0.5;
     outward = outward / max(length(outward), 1.0);
     float scatterAngle = rb.x * 6.28318530718;
-    float2 dir = outward * 0.7 + float2(cos(scatterAngle), sin(scatterAngle)) * 0.45 + float2(0.0, -0.9);
+    float2 dir = outward * 0.7 + float2(cos(scatterAngle), sin(scatterAngle)) * scatter + float2(0.0, -0.9);
     dir = dir / max(length(dir), 1e-4);
 
-    float speed = 0.4 + 0.85 * rb.y;
+    float speed = (0.4 + 0.85 * rb.y) * drift;
     m.displacement = dir * move * maxOffset * speed;
 
     // Rotation about the shard's own site, both directions.
-    m.angle = (spin - 0.5) * 2.4 * move;
+    m.angle = (spinHash - 0.5) * spinAmount * move;
 
     // Alpha lags the movement: nothing starts fading until the piece is 40%
     // through its own life, so it is still visible while it travels. Fading
@@ -151,7 +150,13 @@ half4 disintegrate(
     SwiftUI::Layer layer,
     float2 size,
     float progress,
-    float maxOffset
+    float maxOffset,
+    float shardSize,
+    float sizeVariation,
+    float drift,
+    float scatter,
+    float spinAmount,
+    float sweepBias
 ) {
     if (progress <= 0.0) {
         return layer.sample(position);
@@ -163,24 +168,26 @@ half4 disintegrate(
     // pixel, so instead this walks to a fixed point: take the shard under the
     // pixel, undo its motion, see which shard is there now, repeat. Neighbours
     // move similarly, so it lands in three or four steps.
-    Shard shard = nearestShard(position);
-    Motion motion = shardMotion(shard.id, shard.center, size, progress, maxOffset);
+    Shard shard = nearestShard(position, shardSize, sizeVariation);
+    Motion motion = shardMotion(shard.id, shard.center, size, progress,
+                                maxOffset, drift, scatter, spinAmount, sweepBias);
     float2 source = inverseTransform(position, shard, motion);
 
     for (int i = 0; i < 4; ++i) {
-        Shard next = nearestShard(source);
+        Shard next = nearestShard(source, shardSize, sizeVariation);
         if (all(next.id == shard.id)) {
             break;
         }
         shard = next;
-        motion = shardMotion(shard.id, shard.center, size, progress, maxOffset);
+        motion = shardMotion(shard.id, shard.center, size, progress,
+                             maxOffset, drift, scatter, spinAmount, sweepBias);
         source = inverseTransform(position, shard, motion);
     }
 
     // Still not a fixed point: no shard covers this pixel. This is the gap
     // between flying pieces, and it has to be genuinely empty — returning the
     // layer here instead would smear the intact card into the holes.
-    Shard settled = nearestShard(source);
+    Shard settled = nearestShard(source, shardSize, sizeVariation);
     if (!all(settled.id == shard.id)) {
         return half4(0.0);
     }

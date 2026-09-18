@@ -11,6 +11,9 @@ public extension View {
     ///
     /// - Parameters:
     ///   - isDestroyed: распалась ли вью.
+    ///   - tuning: визуальный характер распада. Эти числа — эстетика
+    ///     (грейд D в ресерч-корпусе), поэтому они настраиваются, в отличие
+    ///     от длительности, которую задаёт резолвер.
     ///   - collapsesLayout: схлопывать ли занимаемое место, чтобы соседние
     ///     элементы перестроились. Порядок здесь не косметический:
     ///     при удалении место закрывается **после** того, как осколки
@@ -19,10 +22,12 @@ public extension View {
     ///     дёргаются сами по себе, без причины.
     func cadenceDisintegration(
         isDestroyed: Bool,
+        tuning: DisintegrationTuning = .standard,
         collapsesLayout: Bool = true
     ) -> some View {
         modifier(CadenceDisintegrationModifier(
             isDestroyed: isDestroyed,
+            tuning: tuning,
             collapsesLayout: collapsesLayout
         ))
     }
@@ -30,6 +35,7 @@ public extension View {
 
 struct CadenceDisintegrationModifier: ViewModifier {
     let isDestroyed: Bool
+    let tuning: DisintegrationTuning
     let collapsesLayout: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -61,7 +67,7 @@ struct CadenceDisintegrationModifier: ViewModifier {
         content
             // Среда могла понизить вид движения до кросс-фейда — тогда
             // шейдер не запускаем вовсе и гасим прозрачностью.
-            .modifier(DisintegrationState(progress: usesShader ? progress : 0))
+            .modifier(DisintegrationState(progress: usesShader ? progress : 0, tuning: tuning))
             .opacity(usesShader ? 1 : 1 - progress)
             .onGeometryChange(for: CGFloat.self) { proxy in
                 proxy.size.height

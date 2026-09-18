@@ -1,5 +1,6 @@
 import SwiftUI
 import Cadence
+import CadenceMotion
 
 /// Щелчок Таноса. Экран показывает две вещи сразу: место, где эффект
 /// оправдан, и место, где он вредит. Второе — не украшение: смысл tier
@@ -10,6 +11,7 @@ struct DisintegrateScreen: View {
 
     @State private var destroyCount = 0
     @State private var isDestroyed = false
+    @State private var tuning = DisintegrationTuning.standard
 
     @State private var misuseCount = 0
     @State private var misuseGeneration = 0
@@ -43,7 +45,7 @@ struct DisintegrateScreen: View {
 
             archiveCard
                 .frame(height: 148)
-                .cadenceDisintegration(isDestroyed: isDestroyed)
+                .cadenceDisintegration(isDestroyed: isDestroyed, tuning: tuning)
 
             HStack(spacing: 12) {
                 Button("Delete forever", role: .destructive) {
@@ -65,6 +67,66 @@ struct DisintegrateScreen: View {
             Text("Fired \(counter.count("disintegrate")) times this session")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+
+            tuningPanel
+        }
+    }
+
+    // MARK: - Настройка характера распада
+
+    private var tuningPanel: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("Character")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Button("Reset") { tuning = .standard }
+                    .font(.caption)
+                    .disabled(tuning == .standard)
+            }
+
+            tuningSlider("Shard size", value: $tuning.shardSize, range: 8...60, unit: "pt",
+                         hint: "Smaller means more pieces")
+            tuningSlider("Size spread", value: $tuning.sizeVariation, range: 0...0.9,
+                         hint: "At zero every piece is the same size and reads as procedural")
+            tuningSlider("Drift", value: $tuning.drift, range: 0.3...2.5,
+                         hint: "How far a shard travels — the duration stays fixed at 1200 ms")
+            tuningSlider("Scatter", value: $tuning.scatter, range: 0...1,
+                         hint: "At zero everything flies straight out from the centre")
+            tuningSlider("Spin", value: $tuning.spin, range: 0...6,
+                         hint: "Rotation of each shard about its own centre")
+            tuningSlider("Sweep", value: $tuning.sweep, range: 0...1,
+                         hint: "One means a clean wave across the card, zero means it just crumbles")
+
+            Text("These are the only numbers in Cadence you are invited to change. The visual character of this effect is grade D in the research corpus — admitted taste, not evidence — so it belongs on a slider. Durations are not here: those come from perception thresholds and the resolver owns them.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .padding(16)
+        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func tuningSlider(
+        _ title: String,
+        value: Binding<Double>,
+        range: ClosedRange<Double>,
+        unit: String = "",
+        hint: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack {
+                Text(title).font(.caption.weight(.medium))
+                Spacer()
+                Text(unit.isEmpty
+                     ? String(format: "%.2f", value.wrappedValue)
+                     : String(format: "%.0f %@", value.wrappedValue, unit))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+            Slider(value: value, in: range)
+            Text(hint)
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
         }
     }
 
