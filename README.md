@@ -199,6 +199,39 @@ when there is no accompanying visual change.
 
 ---
 
+## Designing your own haptics
+
+`CadenceHapticLab()` is a workbench for building a haptic by hand and feeling it
+before it goes into the code. Compose transients and continuous phases, set
+intensity, sharpness and timing, play it, and copy the result out as Swift:
+
+```swift
+HapticComposition(name: "unlock", events: [
+    .transient(at: 0.00, intensity: 0.55, sharpness: 0.70),
+    .continuous(at: 0.10, duration: 0.25, intensity: 0.40, sharpness: 0.20),
+])
+```
+
+Play it through the same path as everything else:
+
+```swift
+HapticSpec(pattern: .custom(composition), minimumInterval: .milliseconds(500))
+```
+
+The lab plays through `CadenceRuntime.shared.scheduler`, exactly like every
+built-in effect — there is no separate preview channel, because a pattern
+auditioned on a side channel would prove nothing about how it lands in the app.
+
+Two caveats worth stating plainly. Haptics cannot be felt in the simulator, and
+the lab says so rather than letting you tune by eye. And the system patterns —
+`success`, `warning`, `selection` — already mean something to anyone who uses
+iOS; a custom rhythm carries no such shared meaning, so it is worth reserving for
+something the system vocabulary genuinely cannot say.
+
+The lab is a development tool that happens to ship in the library, so that it can
+be dropped behind a debug menu in any project. Gate it behind a build flag if
+that bothers you.
+
 ## The catalog
 
 A demo app lives in `Catalog/`. The Xcode project is generated, not committed:

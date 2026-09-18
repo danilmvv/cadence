@@ -100,6 +100,27 @@ public final class CoreHapticsOutput: HapticOutput {
                     )
                 ]
             )
+        case .custom(let composition):
+            return try CHHapticPattern(events: composition.events.map(event(from:)), parameters: [])
+        }
+    }
+
+    /// One composed event turned into its CoreHaptics counterpart.
+    private static func event(from event: HapticEvent) -> CHHapticEvent {
+        switch event.kind {
+        case .transient:
+            transient(
+                at: event.time,
+                intensity: Float(event.intensity),
+                sharpness: Float(event.sharpness)
+            )
+        case .continuous:
+            continuous(
+                at: event.time,
+                duration: event.duration,
+                intensity: Float(event.intensity),
+                sharpness: Float(event.sharpness)
+            )
         }
     }
 
@@ -125,6 +146,11 @@ public final class CoreHapticsOutput: HapticOutput {
         case .impactLight:
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
         case .impactMedium, .decayingRumble:
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        case .custom:
+            // No CoreHaptics engine means no composed patterns at all: a
+            // hand-built rhythm cannot be approximated by a single system tap,
+            // and pretending otherwise would make the editor lie.
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         case .selection:
             UISelectionFeedbackGenerator().selectionChanged()

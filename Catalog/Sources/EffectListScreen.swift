@@ -31,6 +31,15 @@ struct EffectListScreen: View {
             .navigationTitle("Cadence")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        CadenceHapticLab()
+                    } label: {
+                        Label("Haptic lab", systemImage: "waveform")
+                            .labelStyle(.iconOnly)
+                    }
+                    .accessibilityLabel("Haptic lab")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
                     environmentButton
                 }
             }
