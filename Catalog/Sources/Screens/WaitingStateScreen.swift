@@ -2,15 +2,15 @@ import SwiftUI
 import Cadence
 import CadenceCore
 
-/// Показывает правило трёх порогов вживую: до секунды — ничего, от секунды
-/// до десяти — скелетон, дальше — детерминированный прогресс.
+/// Shows the three-threshold rule live: nothing under a second, a skeleton from
+/// one to ten, a determinate progress bar beyond that.
 ///
-/// Пороги здесь не продублированы: экран лишь считает реальное время и
-/// прогресс симулированной загрузки, а решение «что показать» целиком
-/// остаётся за resolve(...) внутри CadenceWaitingIndicator.
+/// The thresholds are not duplicated here: this screen only tracks real elapsed
+/// time and the progress of a simulated load, while the decision of what to show
+/// belongs entirely to resolve(...) inside CadenceWaitingIndicator.
 struct WaitingStateScreen: View {
-    /// Длительность симулированной загрузки — придумана для демонстрации
-    /// и к порогам резолвера отношения не имеет.
+    /// The simulated load's duration is invented for the demo and has nothing to
+    /// do with the resolver's thresholds.
     private static let simulatedLoadDuration: TimeInterval = 14
 
     @Environment(FireCounter.self) private var counter

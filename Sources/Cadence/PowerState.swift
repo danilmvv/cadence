@@ -1,8 +1,8 @@
 import Foundation
 import Observation
 
-/// Режим энергосбережения меняется на ходу, поэтому его читают не разово,
-/// а наблюдают: иначе signature-эффект останется дорогим до перезапуска.
+/// Low Power Mode changes while the app runs, so it is observed rather than read
+/// once: otherwise a signature effect stays expensive until the next launch.
 @MainActor
 @Observable
 public final class PowerState {
@@ -12,12 +12,12 @@ public final class PowerState {
 
     private init() {
         isLowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
-        // [weak self], а не PowerState.shared внутри замыкания: на момент
-        // срабатывания наблюдателя shared мог ещё не быть присвоен —
-        // обращение к нему из собственного init было бы реентрантным
-        // чтением синглтона во время его же построения (зависание/рекурсия
-        // на первом обращении). self здесь уже полностью инициализирован
-        // (isLowPower выше присвоен), поэтому слабый захват self корректен.
+        // [weak self] rather than PowerState.shared inside the closure: when the
+        // observer fires, shared may not have been assigned yet — reaching for it
+        // from its own init would be a reentrant read of the singleton during its
+        // own construction (a hang or recursion on first access). self is fully
+        // initialised by this point (isLowPower is assigned above), so capturing
+        // it weakly is correct.
         NotificationCenter.default.addObserver(
             forName: Notification.Name.NSProcessInfoPowerStateDidChange,
             object: nil,

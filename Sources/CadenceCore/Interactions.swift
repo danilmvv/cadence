@@ -1,32 +1,33 @@
-/// Повседневные события интерфейса.
+/// Everyday interface events.
 ///
-/// Отдельный тип от `SignatureInteraction` — это основной механизм, которым
-/// ресерч влияет на использование: повесить эффект уровня signature на
-/// обычное действие не запрещено соглашением, а не компилируется.
+/// A separate type from `SignatureInteraction`, and that separation is the main
+/// mechanism by which the research reaches the call site: applying a signature
+/// effect to an ordinary action is not discouraged by convention — it does not
+/// compile.
 public enum RoutineInteraction: Sendable, Equatable {
-    /// Палец коснулся интерактивного элемента.
+    /// A finger touched an interactive element.
     case pressed
-    /// Сменился выбранный элемент: сегмент, таб, значение пикера.
+    /// The selected item changed: a segment, a tab, a picker value.
     case selectionChanged
-    /// Появился контент. `staggerIndex` — порядковый номер в списке.
+    /// Content arrived. `staggerIndex` is the item's position in the list.
     case contentArrived(staggerIndex: Int)
-    /// Идёт ожидание. `elapsed` считает вызывающая сторона: резолвер
-    /// не должен знать текущее время, иначе он перестаёт быть чистым.
+    /// A wait is in progress. The caller computes `elapsed`: the resolver must
+    /// not know the current time, or it stops being a pure function.
     case waiting(elapsed: Duration)
-    /// Ввод не прошёл проверку.
+    /// Input failed validation.
     case validationFailed
-    /// Задача завершилась успешно.
+    /// A task finished successfully.
     case taskSucceeded
 }
 
-/// События, для которых уместны редкие выразительные эффекты.
+/// Events that warrant a rare, expressive effect.
 public enum SignatureInteraction: Sendable, Equatable {
-    /// Необратимое удаление.
+    /// Irreversible deletion.
     case destroyed
-    /// Обратная сборка после `destroyed`: осколки слетаются назад.
+    /// Reassembly after `destroyed`: the shards fly back and reform.
     ///
-    /// Существует не ради симметрии, а ради демонстрации и отмены: сам
-    /// `destroyed` по определению применяется там, где возвращаться не к
-    /// чему, поэтому в продуктовом коде эта пара встречается редко.
+    /// It exists for demonstration and for undo, not for symmetry. `destroyed`
+    /// is by definition used where there is nothing to come back to, so this
+    /// pair is rare in product code.
     case restored
 }

@@ -1,12 +1,14 @@
-/// Характер изменения. Определяет бюджет длительности.
-/// Ортогонален `Tier`: частый эффект может быть медленным изменением экрана.
+/// What kind of change this is. Determines the duration budget.
+///
+/// Orthogonal to `Tier`: a frequent effect is allowed to be a slow screen
+/// change, and a rare one is allowed to be quick.
 public enum ChangeClass: Sendable, CaseIterable, Equatable {
-    /// Прямое манипулирование объектом: нажатие, перетаскивание.
+    /// Direct manipulation of an object: a press, a drag.
     case direct
-    /// Заметное изменение на экране: появление контента, модалка.
+    /// A noticeable change on screen: content arriving, a modal.
     case screen
-    /// Крупное перемещение через экран.
+    /// A large movement across the screen.
     case journey
-    /// Длящееся состояние, а не переход: скелетон загрузки.
+    /// An ongoing state rather than a transition: a loading skeleton.
     case persistent
 }

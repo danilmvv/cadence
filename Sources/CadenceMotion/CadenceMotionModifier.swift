@@ -1,16 +1,16 @@
 import SwiftUI
 import CadenceCore
 
-/// Применяет к вью виды движения модификаторного семейства.
+/// Applies the modifier-family motion kinds to a view.
 ///
-/// Первая версия сводила всё к единому `phase: Bool`, и это дало два
-/// видимых бага: `.scale` навсегда оставлял кнопку сжатой после первого
-/// нажатия (тумблер один раз перевернулся в `true` и застрял), а `.fade`
-/// держал контент невидимым, потому что `onChange` не срабатывает на
-/// только что вставленной вью — событию неоткуда взяться. У каждого вида
-/// свой характер, и семантика прописана по видам, а не одним тумблером:
-/// `.scale`/`.shake` — разовый импульс на смену `trigger`, `.fade` —
-/// проявление, обязанное случиться и на первом появлении, и повторно.
+/// The first version reduced everything to one `phase: Bool`, which produced two
+/// visible bugs: `.scale` left a button shrunk forever after the first tap (the
+/// toggle flipped to `true` once and stuck), and `.fade` kept content invisible
+/// because `onChange` never fires for a view that was just inserted — there is
+/// no event to observe. Each kind has its own character, so the semantics are
+/// written per kind rather than through a single flag: `.scale` and `.shake` are
+/// one-shot pulses on a `trigger` change, while `.fade` is a reveal that has to
+/// happen both on first appearance and again afterwards.
 public struct CadenceMotionModifier<Trigger: Equatable>: ViewModifier {
     public let spec: MotionSpec?
     public let trigger: Trigger
@@ -20,14 +20,13 @@ public struct CadenceMotionModifier<Trigger: Equatable>: ViewModifier {
         self.trigger = trigger
     }
 
-    // Произвольный `Trigger: Equatable` вызывающей стороны (например,
-    // кастомный enum состояния) не гарантированно Sendable, а тела ниже
-    // строятся через keyframeAnimator, чьи внутренние замыкания Swift 6 в
-    // строгом режиме конкурентности хочет видеть Sendable-совместимыми.
-    // Протаскивать `Sendable` через весь публичный API `.cadence` ради
-    // этого не стоит: вместо самого `trigger` в дочерние модификаторы ниже
-    // уходит собственный Int-счётчик, растущий на каждую его смену — Int
-    // уже Sendable, и generic-параметр наружу из этого файла не просачивается.
+    // An arbitrary caller-supplied `Trigger: Equatable` (a custom state enum,
+    // say) is not guaranteed Sendable, while the bodies below are built with
+    // keyframeAnimator, whose internal closures Swift 6 wants Sendable-compatible
+    // under strict concurrency. Threading `Sendable` through the whole public
+    // `.cadence` API for that is not worth it: what reaches the child modifiers
+    // below is an Int counter of our own, incremented on every change — Int is
+    // already Sendable, and the generic parameter never leaks out of this file.
     @State private var pulse = 0
 
     public func body(content: Content) -> some View {
@@ -45,62 +44,62 @@ public struct CadenceMotionModifier<Trigger: Equatable>: ViewModifier {
     private func bodyWithSpec(content: Content, spec: MotionSpec) -> some View {
         switch spec.kind {
         case .scale(let target):
-            // Транзиентный импульс: доехать до цели и вернуться к 1.0 за
-            // один прогон таймлайна. `keyframeAnimator(trigger:)` для того
-            // и существует — прогоняет таймлайн ровно один раз на смену
-            // триггера, в отличие от переключаемого состояния, которое
-            // остаётся в конечной точке до следующего переключения.
+            // A transient pulse: travel to the target and return to 1.0 within
+            // one run of the timeline. That is exactly what
+            // `keyframeAnimator(trigger:)` is for — it plays the timeline once
+            // per trigger change, unlike toggled state, which stays at its end
+            // point until the next toggle.
             content.modifier(ScalePulseModifier(target: target, duration: spec.duration.timeInterval, pulse: pulse))
 
         case .shake(let amplitude):
-            // Тот же принцип, что у `.scale`: один прогон на смену pulse.
-            // `shakes` идёт 0 → 3; при shakes == 3 `ShakeEffect.horizontalDisplacement`
-            // обнуляется (затухание дошло до нуля), и конечная точка
-            // таймлайна визуально совпадает с состоянием покоя.
+            // Same principle as `.scale`: one run per pulse change. `shakes`
+            // goes 0 → 3; at shakes == 3 `ShakeEffect.horizontalDisplacement`
+            // reaches zero (the decay has run out), so the end of the timeline
+            // is visually identical to the resting state.
             content.modifier(ShakePulseModifier(amplitude: amplitude, duration: spec.duration.timeInterval, pulse: pulse))
 
         case .fade:
-            // Проявление, а не тумблер: обязано случиться при появлении
-            // вью (когда никакого `onChange` ещё не было и не будет) и
-            // повторно — при смене триггера.
+            // A reveal, not a toggle: it has to happen when the view appears
+            // (when no `onChange` has fired, or ever will) and again on a
+            // trigger change.
             content.modifier(FadeInModifier(spec: spec, pulse: pulse))
 
         case .timingOnly:
-            // Cadence даёт только тайминг и хаптик; геометрию знает и
-            // анимирует сама вызывающая сторона — визуально ничего не трогаем.
+            // Cadence supplies only the timing and the haptic; the caller knows
+            // and animates its own geometry, so nothing is touched visually.
             content
 
         case .disintegrate:
-            // Тот же разовый прогон, что у `.scale` и `.shake`, только
-            // прогресс уходит в Metal-шейдер. Ветка выбирается по виду
-            // движения из уже разрешённого плана, а не по среде: решение о
-            // том, каким движение будет, целиком принадлежит резолверу.
+            // The same one-shot run as `.scale` and `.shake`, except progress
+            // goes into a Metal shader. The branch is chosen by the motion kind
+            // of an already-resolved plan, never by the environment: deciding
+            // what the motion will be belongs entirely to the resolver.
             content.modifier(DisintegratePulseModifier(duration: spec.duration.timeInterval, pulse: pulse))
 
         case .shimmer, .progress, .drawOn:
-            // Видовое семейство: рисует сам Cadence, модификатором не
-            // выражается — см. `MotionKind.isModifierFamily`. Игнорируем
-            // явно, а не через `default`, чтобы новый вид не провалился
-            // сюда молча.
+            // View family: Cadence draws these itself, and they cannot be
+            // expressed as a modifier — see `MotionKind.isModifierFamily`.
+            // Ignored explicitly rather than through a `default`, so a newly
+            // added kind cannot fall through here silently.
             content
 
         case .reassemble:
-            // Тот же шейдер, прогресс идёт 1 -> 0. Работает потому, что
-            // шейдер — чистая функция прогресса: он не хранит состояния
-            // между кадрами и не знает, в какую сторону его гонят.
+            // The same shader with progress running 1 -> 0. It works because
+            // the shader is a pure function of progress: it keeps no state
+            // between frames and has no idea which way it is being driven.
             content.modifier(ReassemblePulseModifier(duration: spec.duration.timeInterval, pulse: pulse))
         }
     }
 }
 
-/// Импульс масштаба: до цели и обратно к 1.0 за один прогон таймлайна.
+/// A scale pulse: to the target and back to 1.0 within one run of the timeline.
 ///
-/// Не-generic тип, а не метод `CadenceMotionModifier<Trigger>`: замыкание
-/// `content:` у `keyframeAnimator` объявлено так, что компилятор в Swift 6
-/// пытается захватить метатип generic-параметра окружающего типа целиком,
-/// даже если внутри замыкания он не используется — отсюда ложное
-/// предупреждение о Sendable. Вынос в конкретный тип, принимающий уже
-/// обычный `Int`, убирает generic-контекст вместе с предупреждением.
+/// A concrete type rather than a method on `CadenceMotionModifier<Trigger>`:
+/// `keyframeAnimator`'s `content:` closure is declared such that Swift 6 tries
+/// to capture the enclosing type's generic metatype whole, even when the closure
+/// never uses it — hence a spurious Sendable warning. Moving this into a concrete
+/// type that takes a plain `Int` removes the generic context and the warning
+/// with it.
 private struct ScalePulseModifier: ViewModifier {
     let target: Double
     let duration: TimeInterval
@@ -118,8 +117,8 @@ private struct ScalePulseModifier: ViewModifier {
     }
 }
 
-/// Затухающее потряхивание: `ShakeEffect.shakes` идёт 0 → 3 за один прогон
-/// таймлайна. См. `ScalePulseModifier` — та же причина не-generic типа.
+/// A decaying shake: `ShakeEffect.shakes` goes 0 → 3 within one run of the
+/// timeline. See `ScalePulseModifier` for why this is a concrete type.
 private struct ShakePulseModifier: ViewModifier {
     let amplitude: Double
     let duration: TimeInterval
@@ -136,11 +135,11 @@ private struct ShakePulseModifier: ViewModifier {
     }
 }
 
-/// Проявление контента: 0 → 1 при появлении вью и повторно на каждую смену
-/// `pulse`. Сброс перед повторным проигрыванием не оборачивается в
-/// анимацию: SwiftUI фиксирует значение `@State` в момент присваивания, и
-/// последующий анимированный переход считается от него, даже если кадр с
-/// промежуточным значением ни разу не был отрисован.
+/// Content revealing itself: 0 → 1 when the view appears, and again on every
+/// `pulse` change. The reset before a replay is deliberately not wrapped in an
+/// animation: SwiftUI captures the `@State` value at the moment of assignment,
+/// and the animated transition that follows is measured from it, even if no
+/// frame carrying the intermediate value was ever drawn.
 private struct FadeInModifier: ViewModifier {
     let spec: MotionSpec
     let pulse: Int

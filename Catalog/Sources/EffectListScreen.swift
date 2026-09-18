@@ -43,7 +43,7 @@ struct EffectListScreen: View {
         .environment(counter)
     }
 
-    // MARK: - Секции по уровням
+    // MARK: - Tier sections
 
     @ViewBuilder
     private func tierSection(_ tier: EffectTier) -> some View {
@@ -58,8 +58,8 @@ struct EffectListScreen: View {
                     .foregroundStyle(.secondary)
             }
 
-            // Редкие эффекты идут в одну колонку и крупно, частые — сеткой
-            // и мелко. Вес на экране здесь несёт смысл, а не вкус.
+            // Rare effects go in a single column and large, frequent ones in a
+            // grid and small. Weight on screen carries meaning here, not taste.
             if tier == .signature {
                 VStack(spacing: 12) {
                     ForEach(effects) { effect in
@@ -82,7 +82,7 @@ struct EffectListScreen: View {
         }
     }
 
-    // MARK: - Кнопка среды
+    // MARK: - Environment button
 
     private var environmentButton: some View {
         Button {
@@ -90,15 +90,16 @@ struct EffectListScreen: View {
         } label: {
             Label("Environment", systemImage: "slider.horizontal.3")
                 .labelStyle(.iconOnly)
-                // Ненулевое состояние видно сразу: иначе легко полчаса
-                // отлаживать «сломанный» эффект, который просто деградирован.
+                // A non-default state shows at a glance: otherwise it is easy to
+                // spend half an hour debugging a "broken" effect that is merely
+                // degraded.
                 .symbolVariant(context == .standard ? .none : .fill)
                 .foregroundStyle(context == .standard ? Color.accentColor : Color.orange)
         }
         .accessibilityLabel("Environment overrides")
     }
 
-    // MARK: - Навигация
+    // MARK: - Navigation
 
     @ViewBuilder
     private func destination(for effect: CatalogEffect) -> some View {

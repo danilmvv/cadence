@@ -1,8 +1,8 @@
 import SwiftUI
 import Cadence
 
-/// Подтверждение завершения задачи: галочка прорисовывается один раз на
-/// каждое нажатие, хаптик success идёт тем же вызовом resolve(...) внутри
+/// Confirmation that a task finished: the checkmark strokes itself once per tap,
+/// and the success haptic comes from the same resolve(...) call inside
 /// CadenceTaskSuccessIndicator.
 struct TaskSuccessScreen: View {
     @Environment(FireCounter.self) private var counter

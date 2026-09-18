@@ -2,10 +2,10 @@ import SwiftUI
 import Cadence
 import CadenceMotion
 
-/// Щелчок Таноса. Экран показывает две вещи сразу: место, где эффект
-/// оправдан, и место, где он вредит. Второе — не украшение: смысл tier
-/// signature в том, что у эффекта есть граница, а границу видно только
-/// на примере её нарушения.
+/// The Thanos snap. The screen shows two things at once: where the effect is
+/// warranted and where it does harm. The second is not decoration — the point of
+/// the signature tier is that the effect has a boundary, and a boundary is only
+/// visible through an example of it being crossed.
 struct DisintegrateScreen: View {
     @Environment(FireCounter.self) private var counter
 
@@ -37,7 +37,7 @@ struct DisintegrateScreen: View {
             .foregroundStyle(.secondary)
     }
 
-    // MARK: - Уместно
+    // MARK: - Where it belongs
 
     private var whereItBelongs: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -72,7 +72,7 @@ struct DisintegrateScreen: View {
         }
     }
 
-    // MARK: - Настройка характера распада
+    // MARK: - Tuning the break-up's character
 
     private var tuningPanel: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -164,7 +164,7 @@ struct DisintegrateScreen: View {
         }
     }
 
-    // MARK: - Неуместно
+    // MARK: - Where it does not belong
 
     private var whereItDoesNot: some View {
         VStack(alignment: .leading, spacing: 16) {

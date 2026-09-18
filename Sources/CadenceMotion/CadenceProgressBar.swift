@@ -1,15 +1,15 @@
 import SwiftUI
 import CadenceCore
 
-/// Детерминированная полоса прогресса ожидания. Видовое семейство: Cadence
-/// рисует её сама — `.progress` не выражается модификатором, см.
+/// A determinate progress bar for a wait. View family: Cadence draws it itself —
+/// `.progress` cannot be expressed as a modifier, see
 /// `MotionKind.isModifierFamily`.
 ///
-/// `progress` считает вызывающая сторона: Cadence не умеет оценивать
-/// длительность чужой работы. А вот анимируется заливка или скачет —
-/// решает `spec`, полученный через `resolve(.waiting(elapsed:), in:)`:
-/// эта вью строится только тогда, когда план уже выбрал `.progress`, и
-/// использует его тайминг, а не изобретает свой.
+/// The caller computes `progress`: Cadence cannot estimate how long someone
+/// else's work will take. Whether the fill animates or jumps, however, is decided
+/// by the `spec` that came out of `resolve(.waiting(elapsed:), in:)` — this view
+/// is only built once the plan has already chosen `.progress`, and it uses that
+/// plan's timing rather than inventing its own.
 public struct CadenceProgressBar: View {
     public var progress: Double
     public var spec: MotionSpec

@@ -1,10 +1,10 @@
-/// Частота, с которой эффект уместен. Управляет строгостью опт-ина,
-/// но НЕ длительностью — за длительность отвечает `ChangeClass`.
+/// How often an effect is appropriate. Governs how hard it is to reach for,
+/// but NOT how long it lasts — duration belongs to `ChangeClass`.
 public enum Tier: Sendable, CaseIterable, Equatable {
-    /// Сотни раз за сессию.
+    /// Hundreds of times per session.
     case workhorse
-    /// Единицы раз за сессию.
+    /// A handful of times per session.
     case accent
-    /// Раз в сессию и реже. Только по явному опт-ину.
+    /// Once a session or less. Explicit opt-in only.
     case signature
 }

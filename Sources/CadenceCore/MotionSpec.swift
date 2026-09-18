@@ -5,29 +5,27 @@ public enum Curve: Sendable, Equatable, Hashable {
     case spring(response: Double, damping: Double)
 }
 
-/// Угол экрана. Свой тип, а не SwiftUI `Edge`: эффект привязан к радиусу угла,
-/// и Core не должен зависеть от SwiftUI.
-/// Декларативное описание движения. Не содержит вью — благодаря этому
-/// резолвер остаётся чистым и тестируется без SwiftUI.
+/// A declarative description of movement. Holds no views, which is what keeps
+/// the resolver pure and testable without SwiftUI.
 public enum MotionKind: Sendable, Equatable, Hashable {
-    // Модификаторное семейство: накладывается поверх вью вызывающей стороны.
+    // Modifier family: applied on top of the caller's own view.
 
-    /// Cadence даёт только тайминг, кривую и хаптик; что именно движется,
-    /// решает приложение. Нужен там, где геометрию знает только оно —
-    /// например, индикатор выбранного сегмента.
+    /// Cadence supplies only the timing, the curve and the haptic; what moves
+    /// is the app's decision. For cases where only the app knows the geometry —
+    /// the indicator of a selected segment, say.
     case timingOnly
     case scale(to: Double)
     case fade
     case shake(amplitude: Double)
 
-    // Видовое семейство: Cadence обязан нарисовать вью сам.
+    // View family: Cadence has to draw the view itself.
     case shimmer
     case progress
     case drawOn
 
-    // Требуют Metal-шейдера.
+    // Require a Metal shader.
     case disintegrate
-    /// Тот же шейдер, прогнанный в обратную сторону.
+    /// The same shader, run backwards.
     case reassemble
 }
 
@@ -52,7 +50,7 @@ public struct MotionSpec: Sendable, Equatable, Hashable {
         self.kind = kind
     }
 
-    /// Укладывается ли длительность в бюджет своего класса изменения.
+    /// Whether the duration fits the budget of its change class.
     public var fitsBudget: Bool {
         guard let limit = MotionBudget.limit(for: change) else { return true }
         return duration <= limit

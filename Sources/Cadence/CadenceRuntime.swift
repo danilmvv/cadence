@@ -1,10 +1,10 @@
 import CadenceCore
 import CadenceHaptics
 
-/// Единственный владелец хаптик-движка в процессе.
+/// The single owner of the haptic engine in the process.
 ///
-/// Синглтон здесь оправдан: CHHapticEngine — дорогой системный ресурс,
-/// и поднимать его на каждый модификатор нельзя.
+/// A singleton is warranted here: CHHapticEngine is an expensive system
+/// resource, and standing one up per modifier is not an option.
 @MainActor
 public final class CadenceRuntime {
     public static let shared = CadenceRuntime()

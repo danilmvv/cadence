@@ -2,13 +2,14 @@ import SwiftUI
 import CadenceCore
 import CadenceMotion
 
-/// Публичный вход в эффект `taskSuccess`: галочка и хаптик одним вызовом.
+/// The public entry point to the `taskSuccess` effect: checkmark and haptic in
+/// one call.
 ///
-/// Симметрична `CadenceWaitingIndicator` — тоже строит контекст из среды и
-/// отдаёт решение `resolve(.taskSucceeded, in:)`, не принимая его сама.
-/// В отличие от ожидания, план `taskSucceeded` никогда не пуст (см.
-/// `baseline(for: .taskSucceeded)` в Resolver.swift), поэтому здесь нет
-/// ветки «ничего не показывать» — она была бы недостижимым кодом.
+/// Symmetrical with `CadenceWaitingIndicator` — it too builds a context from the
+/// environment and hands the decision to `resolve(.taskSucceeded, in:)` rather
+/// than making it. Unlike a wait, the `taskSucceeded` plan is never empty (see
+/// `baseline(for: .taskSucceeded)` in Resolver.swift), so there is no
+/// "show nothing" branch here; it would be unreachable code.
 public struct CadenceTaskSuccessIndicator<Trigger: Equatable>: View {
     private let trigger: Trigger
 
@@ -17,11 +18,12 @@ public struct CadenceTaskSuccessIndicator<Trigger: Equatable>: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.cadenceContextOverride) private var override
 
-    // Тот же приём, что у CadenceMotionModifier: наружу генерик-триггер, а
-    // дочерней вью — свой Int-счётчик, растущий на каждую его смену.
+    // The same device as CadenceMotionModifier: a generic trigger on the
+    // outside, and an Int counter of our own — incremented on every change —
+    // handed to the child view.
     @State private var pulse = 0
 
-    /// - Parameter trigger: меняется на каждое успешное завершение задачи.
+    /// - Parameter trigger: changes on every successful completion.
     public init(trigger: Trigger) {
         self.trigger = trigger
     }

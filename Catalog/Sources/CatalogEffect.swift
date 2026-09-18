@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Уровень частоты. Несёт визуальный вес в каталоге: чем реже эффект
-/// уместен, тем больше места он занимает на экране.
+/// The frequency tier. It carries visual weight in the catalog: the rarer an
+/// effect is appropriate, the more room it takes up on screen.
 enum EffectTier: String, CaseIterable, Identifiable {
     case workhorse
     case accent
@@ -34,8 +34,8 @@ enum EffectTier: String, CaseIterable, Identifiable {
     }
 }
 
-/// Один эффект в каталоге. Всё, что нужно карточке, лежит здесь, чтобы
-/// корневой экран оставался про композицию, а не про содержание.
+/// One effect in the catalog. Everything a card needs lives here, so the root
+/// screen stays about composition rather than about content.
 enum CatalogEffect: String, CaseIterable, Identifiable, Hashable {
     case pressResponse
     case selectionShift
@@ -67,7 +67,7 @@ enum CatalogEffect: String, CaseIterable, Identifiable, Hashable {
         }
     }
 
-    /// Бюджет длительности — не украшение, а главная характеристика эффекта.
+    /// The duration budget is not decoration — it is the effect's defining trait.
     var budget: String {
         switch self {
         case .pressResponse, .selectionShift: "100 ms · direct"

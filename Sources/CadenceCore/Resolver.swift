@@ -1,12 +1,12 @@
-/// Событие плюс среда даёт план обратной связи.
+/// An event plus the environment yields a feedback plan.
 ///
-/// Чистая функция без сайд-эффектов, без SwiftUI и UIKit. Именно поэтому
-/// правила ресерча можно проверить юнит-тестами: см. ResolverRuleTests.
+/// A pure function: no side effects, no SwiftUI, no UIKit. That is precisely
+/// what makes the research rules assertable by unit tests.
 public func resolve(_ event: RoutineInteraction, in context: CadenceContext) -> FeedbackPlan {
     degrade(baseline(for: event), in: context)
 }
 
-// MARK: - Таблица соответствий
+// MARK: - The lookup table
 
 func baseline(for event: RoutineInteraction) -> FeedbackPlan {
     switch event {
@@ -76,17 +76,17 @@ func baseline(for event: RoutineInteraction) -> FeedbackPlan {
     }
 }
 
-/// Каскад появления: шаг 40 мс, суммарная задержка ограничена бюджетом
-/// крупного перемещения. Без ограничения последняя ячейка длинного списка
-/// ждёт секунды, и это читается как тормоза, а не как анимация.
+/// Arrival cascade: a 40 ms step, with the total delay capped at the
+/// large-movement budget. Uncapped, the last row of a long list waits for
+/// seconds, and that reads as lag rather than as animation.
 func staggerDelay(for index: Int) -> Duration {
     guard index > 0 else { return .zero }
     return min(Duration.milliseconds(40) * index, MotionBudget.journey)
 }
 
-/// Три порога отклика. Единственное место, где тулкит прямо запрещает
-/// показывать индикатор: до секунды он воспринимается мерцанием и делает
-/// интерфейс субъективно медленнее, а не быстрее.
+/// The three response thresholds. The one place the toolkit forbids something
+/// outright: under a second an indicator reads as a flicker and makes the
+/// interface feel slower, not faster.
 func waitingPlan(elapsed: Duration) -> FeedbackPlan {
     guard elapsed >= .seconds(1) else {
         return FeedbackPlan(motion: nil, haptic: nil, tier: .accent)
@@ -104,16 +104,16 @@ func waitingPlan(elapsed: Duration) -> FeedbackPlan {
     )
 }
 
-// MARK: - Деградация
+// MARK: - Degradation
 
-/// Порядок важен: сначала подменяем движение, потом решаем судьбу хаптика,
-/// иначе можно оставить хаптик без визуального сопровождения.
+/// Order matters: substitute the motion first, then decide the haptic's fate.
+/// The other way round can leave a haptic with nothing visual beside it.
 func degrade(_ plan: FeedbackPlan, in context: CadenceContext) -> FeedbackPlan {
     var plan = plan
 
     if context.reduceMotion, let motion = plan.motion {
-        // Подмена, а не удаление: пользователь всё равно должен понять,
-        // что состояние изменилось.
+        // Substitution, not removal: the person still has to understand that
+        // something changed.
         plan.motion = MotionSpec(
             duration: min(motion.duration, MotionBudget.transition),
             delay: motion.delay,
@@ -124,8 +124,8 @@ func degrade(_ plan: FeedbackPlan, in context: CadenceContext) -> FeedbackPlan {
     }
 
     if context.lowPower, plan.tier == .signature, let motion = plan.motion {
-        // Шейдер, считающийся каждый кадр, — неподходящая нагрузка
-        // при экономии энергии.
+        // A shader evaluated every frame is the wrong thing to run on a low
+        // battery.
         plan.motion = MotionSpec(
             duration: min(motion.duration, MotionBudget.journey),
             delay: motion.delay,
@@ -139,7 +139,7 @@ func degrade(_ plan: FeedbackPlan, in context: CadenceContext) -> FeedbackPlan {
         plan.haptic = nil
     }
 
-    // Хаптик не может быть единственным носителем информации.
+    // A haptic is never the sole carrier of information.
     if plan.motion == nil {
         plan.haptic = nil
     }
@@ -149,8 +149,8 @@ func degrade(_ plan: FeedbackPlan, in context: CadenceContext) -> FeedbackPlan {
 
 // MARK: - Signature
 
-/// Редкие выразительные события. Отдельная перегрузка, потому что и тип
-/// события отдельный: случайно вызвать её на обычном действии нельзя.
+/// Rare, expressive events. A separate overload because the event type is
+/// separate too: it cannot be reached by accident from an ordinary action.
 public func resolve(_ event: SignatureInteraction, in context: CadenceContext) -> FeedbackPlan {
     degrade(baseline(for: event), in: context)
 }
@@ -158,11 +158,12 @@ public func resolve(_ event: SignatureInteraction, in context: CadenceContext) -
 func baseline(for event: SignatureInteraction) -> FeedbackPlan {
     switch event {
     case .destroyed:
-        // 1200 мс сознательно превышают бюджет крупного перемещения.
-        // Основание эстетическое, не эмпирическое — см. docs/research/05-novelty.md,
-        // грейд D. Плата за превышение — запертость за отдельным типом.
-        // Было 900 мс: осколки успевают оторваться, но не долететь, и волна
-        // отрыва сливается с разлётом в одну смазанную вспышку.
+        // 1200 ms deliberately exceeds the large-movement budget. The basis is
+        // aesthetic, not empirical — see docs/research/05-novelty.md, grade D.
+        // The price paid for exceeding it is being locked behind a separate type.
+        //
+        // It was 900 ms: the shards detach but never travel, so the break-up
+        // wave and the scatter collapse into one smeared flash.
         FeedbackPlan(
             motion: MotionSpec(
                 duration: .milliseconds(1200),
@@ -178,13 +179,12 @@ func baseline(for event: SignatureInteraction) -> FeedbackPlan {
         )
 
     case .restored:
-        // Та же длительность, что и у распада: сборка — это тот же шейдер,
-        // прогнанный в обратную сторону, и разная длительность в двух
-        // направлениях читалась бы как рассинхрон, а не как замысел.
+        // The same duration as the break-up: reassembly is the same shader run
+        // backwards, and different durations in the two directions would read
+        // as a glitch rather than as intent.
         //
-        // Хаптик мягче: возвращение — событие меньшего веса, чем
-        // необратимое удаление, и одинаковая отдача уравняла бы их по
-        // значимости.
+        // The haptic is softer: coming back is a smaller event than irreversible
+        // deletion, and an identical kick would put the two on a par.
         FeedbackPlan(
             motion: MotionSpec(
                 duration: .milliseconds(1200),

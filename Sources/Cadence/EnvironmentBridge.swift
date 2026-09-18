@@ -2,10 +2,10 @@ import SwiftUI
 import CadenceCore
 
 public extension CadenceContext {
-    /// Собирает контекст из значений среды.
+    /// Builds a context out of environment values.
     ///
-    /// Все входы передаются явно и функция ничего не читает из глобального
-    /// состояния: только так её можно проверить тестом.
+    /// Every input is passed explicitly and the function reads nothing from
+    /// global state: that is the only way it can be asserted by a test.
     static func make(
         reduceMotion: Bool,
         reduceTransparency: Bool,
@@ -24,7 +24,7 @@ public extension CadenceContext {
 }
 
 public extension EnvironmentValues {
-    /// Подмена контекста целиком. Нужна каталогу и превью, чтобы показывать
-    /// деградацию, не меняя системные настройки устройства.
+    /// Replaces the context wholesale. Needed by the catalog and by previews so
+    /// degradation can be shown without touching the device's system settings.
     @Entry var cadenceContextOverride: CadenceContext? = nil
 }

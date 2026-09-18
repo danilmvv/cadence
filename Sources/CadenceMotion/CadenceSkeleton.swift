@@ -1,14 +1,15 @@
 import SwiftUI
 import CadenceCore
 
-/// Заглушка ожидания. Видовое семейство: Cadence рисует её сама — `.shimmer`
-/// не выражается модификатором, см. `MotionKind.isModifierFamily`.
+/// A waiting placeholder. View family: Cadence draws it itself — `.shimmer`
+/// cannot be expressed as a modifier, see `MotionKind.isModifierFamily`.
 ///
-/// Аниматься ли — решает не этот файл. `spec.kind` уже прошёл резолвер и
-/// деградацию: `.shimmer` — бегущий блик, `.fade` — Reduce Motion подменил
-/// вид, и это значит неподвижную заглушку, а не анимированную. Ни порог
-/// ожидания, ни выбор между скелетоном и прогрессом здесь не принимаются —
-/// это исключительно дело `resolve(.waiting(elapsed:), in:)`.
+/// Whether it animates is not this file's decision. `spec.kind` has already been
+/// through the resolver and through degradation: `.shimmer` means a travelling
+/// highlight, `.fade` means Reduce Motion substituted the kind and the
+/// placeholder should be still rather than animated. Neither the waiting
+/// threshold nor the choice between skeleton and progress is made here — both
+/// belong exclusively to `resolve(.waiting(elapsed:), in:)`.
 public struct CadenceSkeleton: View {
     public var spec: MotionSpec
     public var cornerRadius: CGFloat
@@ -22,9 +23,9 @@ public struct CadenceSkeleton: View {
         self.height = height
     }
 
-    /// Единственное решение, которое принимает сама вью: рисовать бегущий
-    /// блик или остаться неподвижной. Оба случая — валидные результаты
-    /// резолвера, а не альтернативные реализации одного и того же вида.
+    /// The only decision this view makes for itself: draw a travelling highlight
+    /// or stay still. Both are valid resolver outcomes, not two implementations
+    /// of the same kind.
     private var isAnimated: Bool { spec.kind == .shimmer }
 
     public var body: some View {
@@ -48,8 +49,8 @@ public struct CadenceSkeleton: View {
             .frame(height: height)
             .onAppear {
                 guard isAnimated else { return }
-                // Длительность цикла блика — из resolve(...), а не выдумана
-                // здесь: тот же `spec.duration`, что несёт таймингу резолвер.
+                // The highlight's cycle length comes from resolve(...), not from
+                // this file: the same `spec.duration` the resolver assigned.
                 withAnimation(.linear(duration: spec.duration.timeInterval).repeatForever(autoreverses: false)) {
                     isSweeping = true
                 }

@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// Компактная карточка для частых эффектов. Их много, поэтому каждая
-/// занимает мало места и держит себя тихо — ровно то, что тулкит требует
-/// от самих workhorse-эффектов.
+/// A compact card for frequent effects. There are many of them, so each takes
+/// little room and keeps quiet — exactly what the toolkit demands of workhorse
+/// effects themselves.
 struct EffectCard: View {
     let effect: CatalogEffect
 
@@ -35,9 +35,9 @@ struct EffectCard: View {
     }
 }
 
-/// Крупная карточка для редких выразительных эффектов. Разница в размере
-/// не декоративная: место на экране здесь — это и есть сообщение о том,
-/// что эффект дорогой и применяется штучно.
+/// A large card for rare, expressive effects. The size difference is not
+/// decorative: room on screen is itself the message that this effect is
+/// expensive and used sparingly.
 struct SignatureEffectCard: View {
     let effect: CatalogEffect
 

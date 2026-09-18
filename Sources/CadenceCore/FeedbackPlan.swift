@@ -1,4 +1,4 @@
-/// Результат резолвера: что показать и что дать почувствовать.
+/// What the resolver decided: what to show and what to let the person feel.
 public struct FeedbackPlan: Sendable, Equatable {
     public var motion: MotionSpec?
     public var haptic: HapticSpec?

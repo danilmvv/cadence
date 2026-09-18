@@ -2,7 +2,7 @@ import SwiftUI
 import CadenceCore
 
 public extension MotionSpec {
-    /// SwiftUI-анимация, соответствующая спеке. Задержка каскада входит сюда.
+    /// The SwiftUI animation this spec describes. The cascade delay is folded in.
     var animation: Animation {
         let seconds = duration.timeInterval
         let base: Animation = switch curve {

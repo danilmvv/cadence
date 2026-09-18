@@ -3,13 +3,13 @@ import CadenceCore
 import CadenceMotion
 
 public extension View {
-    /// Повседневное событие: движение и хаптик подбирает резолвер.
+    /// An everyday event: the resolver picks the motion and the haptic.
     func cadence<T: Equatable>(_ event: RoutineInteraction, trigger: T) -> some View {
         modifier(CadenceEventModifier(plan: { resolve(event, in: $0) }, trigger: trigger))
     }
 
-    /// Редкое выразительное событие. Отдельный метод и отдельный тип события:
-    /// применить его к обычному действию не получится — не скомпилируется.
+    /// A rare, expressive event. A separate method and a separate event type:
+    /// applying it to an ordinary action does not compile.
     func cadenceSignature<T: Equatable>(_ event: SignatureInteraction, trigger: T) -> some View {
         modifier(CadenceEventModifier(plan: { resolve(event, in: $0) }, trigger: trigger))
     }
@@ -34,9 +34,9 @@ struct CadenceEventModifier<T: Equatable>: ViewModifier {
         )
         let resolved = plan(context)
 
-        // Движение теперь ведёт себя само по себе от trigger (CadenceMotionModifier
-        // разбирает поведение по видам движения), поэтому отдельный `phase`
-        // здесь не нужен — он остался бы лишним источником рассинхронизации.
+        // Motion now drives itself from the trigger (CadenceMotionModifier works
+        // the behaviour out per motion kind), so a separate `phase` is not needed
+        // here — it would only be one more thing to fall out of sync.
         return content
             .modifier(CadenceMotionModifier(spec: resolved.motion, trigger: trigger))
             .onChange(of: trigger) {

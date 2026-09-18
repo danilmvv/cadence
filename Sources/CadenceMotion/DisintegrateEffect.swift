@@ -2,47 +2,46 @@ import Metal
 import OSLog
 import SwiftUI
 
-/// Шейдер распада: загрузка, проверка и параметры.
+/// The disintegration shader: loading, probing and parameters.
 ///
-/// Существует отдельно от модификатора ровно из-за одной особенности
-/// `ShaderLibrary`: это `@dynamicMemberLookup`, поэтому
-/// `ShaderLibrary.bundle(.module).disintegrate(...)` компилируется всегда —
-/// и когда функция есть, и когда её нет. Отказ приходит не ошибкой Swift, а
-/// обвалом Metal в момент первой отрисовки, и перехватить его нечем.
-/// Значит, резолвимость нужно проверить заранее и один раз — это и делает
-/// `isAvailable`.
+/// It lives apart from the modifier because of one property of `ShaderLibrary`:
+/// it is `@dynamicMemberLookup`, so `ShaderLibrary.bundle(.module).disintegrate(...)`
+/// always compiles — whether the function exists or not. Failure arrives not as
+/// a Swift error but as a Metal crash at first draw, with nothing to catch. So
+/// resolvability has to be probed up front and exactly once, which is what
+/// `isAvailable` does.
 enum DisintegrateShader {
     private static let log = Logger(subsystem: "Cadence", category: "motion")
 
-    /// Имя функции в `Disintegrate.metal`. Строка, а не символ: связь между
-    /// Swift и Metal здесь именная и ничем на этапе компиляции не проверяется.
+    /// The function name in `Disintegrate.metal`. A string, not a symbol: the
+    /// link between Swift and Metal is by name and is not checked at compile time.
     static let functionName = "disintegrate"
 
-    /// Верхняя граница разлёта осколка в точках.
+    /// Upper bound on how far a shard travels, in points.
     static let maxOffset: CGFloat = 90
 
-    /// Запас кадра под разлёт. Больше `maxOffset`, потому что осколок ещё и
-    /// вращается вокруг своего центра: точка на его краю уезжает дальше, чем
-    /// сам центр. Не хватит запаса — дальние куски обрежет по границе вью,
-    /// и это не даст ни ошибки, ни предупреждения.
+    /// Frame headroom for the scatter. Larger than `maxOffset` because a shard
+    /// also spins about its own centre: a point on its edge travels further than
+    /// the centre does. Too little headroom and the outermost pieces are clipped
+    /// at the view's bounds, with neither an error nor a warning to show for it.
     static func sampleOffset(for drift: Double) -> CGSize {
         let side = 130 * max(drift, 1)
         return CGSize(width: side, height: side)
     }
 
-    /// Резолвится ли функция шейдера в Metal-библиотеке этого таргета.
+    /// Whether the shader function resolves in this target's Metal library.
     ///
-    /// Проверяется лениво и ровно один раз (`static let`). Библиотека берётся
-    /// из `Bundle.module`: `.metal` в SPM-таргете компилируется в
-    /// `default.metallib` внутри бандла таргета, а не в библиотеку главного
-    /// бандла приложения, поэтому `MTLDevice.makeDefaultLibrary()` без
-    /// бандла её не нашёл бы.
+    /// Probed lazily and exactly once (`static let`). The library comes from
+    /// `Bundle.module`: a `.metal` file in an SPM target compiles into a
+    /// `default.metallib` inside that target's bundle, not into the host app's
+    /// library, so `MTLDevice.makeDefaultLibrary()` without a bundle would never
+    /// find it.
     static let isAvailable: Bool = resolveFunction()
 
     private static func resolveFunction() -> Bool {
         guard let device = MTLCreateSystemDefaultDevice() else {
-            // Не ошибка кода: устройство без доступного Metal. Громко падать
-            // тут не за что, деградации достаточно.
+            // Not a code defect: a device with no Metal available. Nothing here
+            // deserves a loud failure — degrading is enough.
             log.notice("Metal device unavailable, disintegrate degrades to a cross-fade")
             return false
         }
@@ -62,9 +61,10 @@ enum DisintegrateShader {
         }
 
         guard library.makeFunction(name: functionName) != nil else {
-            // Именно этот случай ловит ошибку обращения через
-            // `ShaderLibrary.default` вместо `.bundle(.module)`: с ней эффект
-            // работает в каталоге и молча исчезает в любом другом проекте.
+            // This is the branch that catches reaching for
+            // `ShaderLibrary.default` instead of `.bundle(.module)`: with that
+            // mistake the effect works in the catalog and silently disappears in
+            // every other project.
             assertionFailure(
                 "Cadence: Metal function \(functionName) is missing from the CadenceMotion shader library"
             )
@@ -78,36 +78,36 @@ enum DisintegrateShader {
     }
 }
 
-/// Один кадр распада при заданном прогрессе.
+/// A single frame of the break-up at a given progress.
 ///
-/// Шейдер — `layerEffect`, а не `colorEffect`: пиксель сэмплирует слой в
-/// стороне от себя, а `colorEffect` соседних пикселей не видит в принципе.
-/// И не `distortionEffect`: тот возвращает позицию источника, а не цвет, и
-/// затухание альфы через него не выражается.
-/// Визуальный характер распада.
+/// A `layerEffect` rather than a `colorEffect`: a pixel samples the layer away
+/// from itself, and `colorEffect` cannot see neighbouring pixels at all. Nor a
+/// `distortionEffect`: that returns a source position rather than a colour, and
+/// an alpha fade cannot be expressed through it.
+/// The visual character of the break-up.
 ///
-/// Эти числа НЕ выводятся из ресерча — в корпусе сам эффект стоит на грейде D,
-/// то есть признан эстетическим решением. Именно поэтому они вынесены в
-/// настраиваемую структуру, а длительность — нет: длительность приходит из
-/// резолвера и governed порогами восприятия.
+/// These numbers do NOT come from research — in the corpus the effect itself is
+/// grade D, an admitted aesthetic decision. That is exactly why they live in a
+/// tunable struct while the duration does not: duration comes from the resolver
+/// and is governed by perception thresholds.
 ///
-/// `drift` не «скорость анимации»: время распада задаёт резолвер. Это
-/// дальность разлёта осколка за то же самое время.
+/// `drift` is not "animation speed": the resolver sets how long the break-up
+/// takes. It is how far a shard travels in that same time.
 public struct DisintegrationTuning: Sendable, Equatable {
-    /// Номинальный размер осколка в точках. Меньше — больше кусков.
+    /// Nominal shard size in points. Smaller means more pieces.
     public var shardSize: Double
-    /// Разброс размеров, 0...1. На нуле все куски одинаковые и читаются
-    /// как алгоритм, а не как разрушение.
+    /// Size spread, 0...1. At zero every piece is identical and reads as an
+    /// algorithm rather than as something breaking.
     public var sizeVariation: Double
-    /// Дальность разлёта. 1.0 — базовая.
+    /// How far pieces travel. 1.0 is the baseline.
     public var drift: Double
-    /// Насколько направление осколка случайно, 0...1. На нуле все летят
-    /// строго от центра наружу.
+    /// How random a shard's direction is, 0...1. At zero everything flies
+    /// straight outwards from the centre.
     public var scatter: Double
-    /// Величина поворота осколка вокруг своей оси.
+    /// How much each shard rotates about its own centre.
     public var spin: Double
-    /// 1 — отрыв идёт чистой волной по карточке; 0 — каждый осколок
-    /// выбирает момент сам, и карточка просто осыпается.
+    /// 1 means the break-up travels as a clean wave across the card; 0 means
+    /// every shard picks its own moment and the card simply crumbles.
     public var sweep: Double
 
     public init(
@@ -126,7 +126,7 @@ public struct DisintegrationTuning: Sendable, Equatable {
         self.sweep = sweep
     }
 
-    /// Значения, с которыми эффект принимался в тулкит.
+    /// The values the effect was accepted into the toolkit with.
     public static let standard = DisintegrationTuning()
 }
 
@@ -136,11 +136,11 @@ struct DisintegrateFrame: ViewModifier {
 
     func body(content: Content) -> some View {
         if DisintegrateShader.isAvailable {
-            // `visualEffect` нужен только ради размера: по нему шейдер
-            // считает направление разлёта (наружу от центра вью) и волну
-            // отрыва слева направо. Без размера обе величины пришлось бы
-            // задать в абсолютных точках, и эффект по-разному читался бы на
-            // карточке и на строке списка.
+            // `visualEffect` is here only for the size: the shader derives the
+            // scatter direction (outwards from the view's centre) and the
+            // left-to-right break-up wave from it. Without the size both would
+            // have to be given in absolute points, and the effect would read
+            // differently on a card than on a list row.
             content.visualEffect { view, proxy in
                 view.layerEffect(
                     ShaderLibrary.bundle(.module).disintegrate(
@@ -154,33 +154,34 @@ struct DisintegrateFrame: ViewModifier {
                         .float(Float(tuning.spin)),
                         .float(Float(tuning.sweep))
                     ),
-                    // Запас кадра растёт вместе с дальностью: занизить его —
-                    // получить осколки, обрезанные по границе вью, без
-                    // единого предупреждения.
+                    // Frame headroom grows with drift: set it too low and the
+                    // shards are clipped at the view's bounds, without a single
+                    // warning.
                     maxSampleOffset: DisintegrateShader.sampleOffset(for: tuning.drift),
-                    // В покое эффект снят целиком: `layerEffect` заставляет
-                    // SwiftUI рисовать поддерево в отдельный буфер, и платить
-                    // за это, пока ничего не происходит, незачем.
+                    // At rest the effect is removed entirely: `layerEffect`
+                    // forces SwiftUI to render the subtree into a separate
+                    // buffer, and there is no reason to pay for that while
+                    // nothing is happening.
                     isEnabled: progress > 0
                 )
             }
         } else {
-            // Тихая деградация в релизе: кросс-фейд вместо распада.
+            // Quiet degradation in release: a cross-fade instead of a break-up.
             content.opacity(1 - progress)
         }
     }
 }
 
-/// Распад за один прогон таймлайна на смену `pulse`.
+/// The break-up as one run of the timeline per `pulse` change.
 ///
-/// Тот же приём, что у `ScalePulseModifier`: `keyframeAnimator(trigger:)`
-/// проигрывает 0 → 1 ровно один раз и остаётся в конечной точке. Конечная
-/// точка здесь — полностью рассыпавшаяся вью, и это правильно: событие
-/// называется `destroyed`, возвращаться не к чему.
+/// The same device as `ScalePulseModifier`: `keyframeAnimator(trigger:)` plays
+/// 0 → 1 exactly once and stays at the end point. Here the end point is a fully
+/// scattered view, which is correct — the event is called `destroyed` and there
+/// is nothing to return to.
 ///
-/// Не-generic тип по той же причине, что и остальные `*PulseModifier` в
-/// `CadenceMotionModifier.swift`: замыкания `keyframeAnimator` в Swift 6
-/// тянут за собой метатип generic-параметра окружающего типа.
+/// A concrete type for the same reason as the other `*PulseModifier` types in
+/// `CadenceMotionModifier.swift`: under Swift 6 the `keyframeAnimator` closures
+/// drag in the enclosing type's generic metatype.
 struct DisintegratePulseModifier: ViewModifier {
     let duration: TimeInterval
     let pulse: Int
@@ -190,26 +191,28 @@ struct DisintegratePulseModifier: ViewModifier {
             view.modifier(DisintegrateFrame(progress: progress))
         } keyframes: { _ in
             KeyframeTrack(\.self) {
-                // Прогресс идёт строго линейно, и это не упущение: вся
-                // мягкость живёт внутри шейдера, где у каждого осколка своя
-                // ease-out на смещении и своя, отстающая, на альфе. Кривая
-                // снаружи наложилась бы на них второй раз и сбила бы волну
-                // отрыва — та обязана идти по карточке с постоянной скоростью.
+                // Progress runs strictly linearly, and that is not an oversight:
+                // all the softness lives inside the shader, where every shard has
+                // its own ease-out on displacement and its own lagging one on
+                // alpha. A curve applied out here would compose with those a
+                // second time and break the break-up wave, which has to travel
+                // across the card at a constant rate.
                 LinearKeyframe(1.0, duration: duration)
             }
         }
     }
 }
 
-/// Обратная сборка импульсом: тот же кадр, прогресс идёт 1 -> 0.
+/// Reassembly as a pulse: the same frame, with progress running 1 -> 0.
 ///
-/// Работает потому, что шейдер — чистая функция прогресса: состояния между
-/// кадрами он не держит и не знает, в какую сторону его гонят.
+/// It works because the shader is a pure function of progress: it keeps no state
+/// between frames and has no idea which way it is being driven.
 ///
-/// Осторожно: как и всякий импульс, стартует со своего начального значения,
-/// то есть с распавшегося состояния. Применять к вью, которая уже распалась.
-/// Для пары «распад — сборка» правильный вход — `cadenceDisintegration(isDestroyed:)`,
-/// он управляется состоянием и в покое корректен в обе стороны.
+/// Careful: like any pulse it starts from its own initial value, which here is
+/// the scattered state. Apply it only to a view that has already broken up. For
+/// the break-up/reassembly pair the right entry point is
+/// `cadenceDisintegration(isDestroyed:)`, which is state-driven and correct at
+/// rest in both directions.
 struct ReassemblePulseModifier: ViewModifier {
     let duration: TimeInterval
     let pulse: Int
@@ -225,18 +228,19 @@ struct ReassemblePulseModifier: ViewModifier {
     }
 }
 
-/// Распад, управляемый состоянием, а не импульсом.
+/// The break-up driven by state rather than by a pulse.
 ///
-/// `@preconcurrency` на соответствии — не украшение: `ViewModifier` изолирован
-/// главным актором, а `Animatable.animatableData` SwiftUI дёргает вне его,
-/// и Swift 6 считает это пересечением изоляции. Гонки тут нет: значение —
-/// одно `Double`, которое читает и пишет сама SwiftUI во время интерполяции.
+/// The `@preconcurrency` on the conformance is not decoration: `ViewModifier` is
+/// main-actor isolated while SwiftUI calls `Animatable.animatableData` outside
+/// it, and Swift 6 counts that as crossing isolation. There is no race here: the
+/// value is a single `Double` that SwiftUI itself reads and writes while
+/// interpolating.
 ///
-/// `Animatable` здесь несёт всю работу: SwiftUI интерполирует `progress`
-/// покадрово, поэтому одно и то же место кода обслуживает оба направления —
-/// 0 -> 1 при удалении и 1 -> 0 при возврате. Импульсом это не выражается:
-/// у импульса есть начало и конец, а у пары «распад — сборка» есть два
-/// устойчивых состояния, между которыми ходят в обе стороны.
+/// `Animatable` does all the work: SwiftUI interpolates `progress` frame by
+/// frame, so one piece of code serves both directions — 0 -> 1 on deletion and
+/// 1 -> 0 on the way back. A pulse cannot express this: a pulse has a beginning
+/// and an end, while the break-up/reassembly pair has two resting states with
+/// travel in both directions.
 public struct DisintegrationState: ViewModifier, @preconcurrency Animatable {
     public var progress: Double
     public var tuning: DisintegrationTuning

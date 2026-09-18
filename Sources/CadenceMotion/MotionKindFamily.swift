@@ -1,11 +1,11 @@
 import CadenceCore
 
 public extension MotionKind {
-    /// Накладывается ли вид поверх вью вызывающей стороны.
+    /// Whether the kind is applied on top of the caller's own view.
     ///
-    /// `false` означает, что Cadence обязан нарисовать вью сам: скелетон,
-    /// галочку, полосу прогресса. Такие виды не выражаются модификатором,
-    /// и попытка применить их через `CadenceMotionModifier` — ошибка.
+    /// `false` means Cadence has to draw the view itself: a skeleton, a
+    /// checkmark, a progress bar. Such kinds cannot be expressed as a modifier,
+    /// and reaching for `CadenceMotionModifier` with one is a mistake.
     var isModifierFamily: Bool {
         switch self {
         case .timingOnly, .scale, .fade, .shake, .disintegrate, .reassemble:

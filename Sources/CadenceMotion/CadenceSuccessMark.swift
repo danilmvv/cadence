@@ -1,22 +1,21 @@
 import SwiftUI
 import CadenceCore
 
-/// Галочка подтверждения. Видовое семейство: Cadence рисует её сама —
-/// `.drawOn` не выражается модификатором, см. `MotionKind.isModifierFamily`.
+/// A confirmation checkmark. View family: Cadence draws it itself — `.drawOn`
+/// cannot be expressed as a modifier, see `MotionKind.isModifierFamily`.
 ///
-/// Поведение целиком читается из `spec.kind`, уже прошедшего
-/// `resolve(.taskSucceeded, in:)`: `.drawOn` — обводка прорисовывается по
-/// контуру, `.fade` — Reduce Motion подменил вид, и уже готовая галочка
-/// просто проявляется крестфейдом. Длительность и кривая — `spec.animation`,
-/// не числа, придуманные в этом файле.
+/// The behaviour is read entirely from `spec.kind` after it has been through
+/// `resolve(.taskSucceeded, in:)`: `.drawOn` strokes the mark along its path,
+/// `.fade` means Reduce Motion substituted the kind and a finished checkmark
+/// simply cross-fades in. Duration and curve come from `spec.animation`, not
+/// from numbers invented in this file.
 ///
-/// `pulse` — счётчик прогонов, растущий на каждое срабатывание события,
-/// тот же приём, что у `ScalePulseModifier`/`ShakePulseModifier` в
-/// `CadenceMotionModifier`: один прогон анимации на смену значения, и,
-/// в отличие от `FadeInModifier`, без автопроигрыша на первом появлении —
-/// `taskSucceeded` описывает разовое событие завершения задачи, а не
-/// состояние контента, которое обязано быть видно сразу после монтирования.
-/// До первого срабатывания галочки не видно вовсе.
+/// `pulse` is a run counter, incremented every time the event fires — the same
+/// device as `ScalePulseModifier` and `ShakePulseModifier` in
+/// `CadenceMotionModifier`: one run of the animation per change. Unlike
+/// `FadeInModifier`, there is no autoplay on first appearance: `taskSucceeded`
+/// describes a one-off completion event, not content that must be visible the
+/// moment it mounts. Before the first firing, the checkmark is not shown at all.
 public struct CadenceSuccessMark: View {
     public var spec: MotionSpec
     public var pulse: Int
@@ -53,9 +52,9 @@ public struct CadenceSuccessMark: View {
                 }
 
         case .timingOnly, .scale, .shake, .shimmer, .progress, .disintegrate, .reassemble:
-            // resolve(.taskSucceeded) никогда не возвращает эти виды — сюда
-            // мы попасть не должны. Явное перечисление, а не default, чтобы
-            // новый вид в MotionKind не провалился сюда молча.
+            // resolve(.taskSucceeded) never returns these kinds, so this branch
+            // should be unreachable. Listed explicitly rather than behind a
+            // default, so a newly added MotionKind cannot fall through silently.
             EmptyView()
         }
     }
@@ -65,8 +64,8 @@ public struct CadenceSuccessMark: View {
     }
 }
 
-/// Галочка как путь из двух отрезков. Приватная: наружу нужна только
-/// готовая вью `CadenceSuccessMark`, не форма сама по себе.
+/// The checkmark as a two-segment path. Private: only the finished
+/// `CadenceSuccessMark` view is needed outside, not the shape itself.
 private struct CheckmarkShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()

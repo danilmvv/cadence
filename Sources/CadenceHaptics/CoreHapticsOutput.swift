@@ -3,37 +3,38 @@ import OSLog
 import UIKit
 import CadenceCore
 
-/// Воспроизведение через CoreHaptics с падением на `UIFeedbackGenerator`.
+/// Playback through CoreHaptics, falling back to `UIFeedbackGenerator`.
 @MainActor
 public final class CoreHapticsOutput: HapticOutput {
     private static let log = Logger(subsystem: "Cadence", category: "haptics")
 
-    /// Есть ли на устройстве Taptic Engine. Если нет — хаптик тихо не играет,
-    /// а движение сохраняется: обратная связь не должна исчезать целиком.
+    /// Whether the device has a Taptic Engine. If not, haptics are a silent
+    /// no-op while motion is unaffected: feedback must not vanish altogether.
     public let isAvailable: Bool
     private var engine: CHHapticEngine?
 
     public init() {
         isAvailable = CHHapticEngine.capabilitiesForHardware().supportsHaptics
         guard isAvailable else {
-            Self.log.notice("Нет Taptic Engine: хаптик отключён, движение сохраняется")
+            Self.log.notice("No Taptic Engine: haptics disabled, motion unaffected")
             return
         }
         do {
             let engine = try CHHapticEngine()
-            // Движок глохнет при уходе в фон и после системного reset.
-            // Без обработчиков вибрация однажды пропадает до перезапуска.
+            // The engine stops when the app backgrounds and after a system
+            // reset. Without these handlers the vibration silently disappears
+            // until the app is relaunched.
             engine.resetHandler = { [weak self] in
                 Task { @MainActor in self?.restart(after: "reset") }
             }
             engine.stoppedHandler = { [weak self] reason in
-                Self.log.notice("Движок остановлен, причина \(reason.rawValue)")
+                Self.log.notice("Engine stopped, reason \(reason.rawValue)")
                 Task { @MainActor in self?.restart(after: "stopped") }
             }
             try engine.start()
             self.engine = engine
         } catch {
-            Self.log.error("CHHapticEngine не поднялся: \(error.localizedDescription)")
+            Self.log.error("CHHapticEngine failed to start: \(error.localizedDescription)")
             engine = nil
         }
     }
@@ -47,7 +48,7 @@ public final class CoreHapticsOutput: HapticOutput {
             let player = try engine.makePlayer(with: try Self.corePattern(for: pattern))
             try player.start(atTime: CHHapticTimeImmediate)
         } catch {
-            Self.log.error("Воспроизведение не удалось: \(error.localizedDescription)")
+            Self.log.error("Playback failed: \(error.localizedDescription)")
             fallback(pattern)
         }
     }
@@ -56,11 +57,11 @@ public final class CoreHapticsOutput: HapticOutput {
         do {
             try engine?.start()
         } catch {
-            Self.log.error("Перезапуск после \(reason) не удался: \(error.localizedDescription)")
+            Self.log.error("Restart after \(reason) failed: \(error.localizedDescription)")
         }
     }
 
-    // MARK: - Паттерны
+    // MARK: - Patterns
 
     private static func corePattern(for pattern: HapticPattern) throws -> CHHapticPattern {
         switch pattern {

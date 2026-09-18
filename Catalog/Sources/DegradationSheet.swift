@@ -2,11 +2,11 @@ import SwiftUI
 import Cadence
 import CadenceCore
 
-/// Переключатели среды. Подменяют контекст целиком, поэтому деградацию
-/// видно, не выходя в системные настройки устройства.
+/// Environment toggles. They replace the context wholesale, so degradation can
+/// be inspected without leaving for the device's system settings.
 ///
-/// Живут за кнопкой в тулбаре, а не на главном экране: это инструменты
-/// отладки, а не содержание каталога.
+/// They live behind a toolbar button rather than on the main screen: these are
+/// debugging instruments, not the catalog's content.
 struct DegradationSheet: View {
     @Binding var context: CadenceContext
     @Environment(\.dismiss) private var dismiss

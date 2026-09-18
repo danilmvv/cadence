@@ -3,23 +3,22 @@ import CadenceCore
 import CadenceMotion
 
 public extension View {
-    /// Распад и обратная сборка, управляемые состоянием.
+    /// The break-up and its reassembly, driven by state.
     ///
-    /// В отличие от `cadenceSignature(.destroyed, trigger:)`, который даёт
-    /// разовый импульс, эта пара имеет два устойчивых состояния и ходит
-    /// между ними в обе стороны.
+    /// Unlike `cadenceSignature(.destroyed, trigger:)`, which fires a one-shot
+    /// pulse, this pair has two resting states and travels between them in both
+    /// directions.
     ///
     /// - Parameters:
-    ///   - isDestroyed: распалась ли вью.
-    ///   - tuning: визуальный характер распада. Эти числа — эстетика
-    ///     (грейд D в ресерч-корпусе), поэтому они настраиваются, в отличие
-    ///     от длительности, которую задаёт резолвер.
-    ///   - collapsesLayout: схлопывать ли занимаемое место, чтобы соседние
-    ///     элементы перестроились. Порядок здесь не косметический:
-    ///     при удалении место закрывается **после** того, как осколки
-    ///     улетели, при возврате — раскрывается **до** того, как они
-    ///     слетятся. Обратный порядок выглядел бы так, будто соседи
-    ///     дёргаются сами по себе, без причины.
+    ///   - isDestroyed: whether the view has broken up.
+    ///   - tuning: the visual character of the break-up. These numbers are
+    ///     aesthetics (grade D in the research corpus), which is why they are
+    ///     tunable while the duration — set by the resolver — is not.
+    ///   - collapsesLayout: whether to collapse the space taken up, so the
+    ///     neighbouring elements reflow. The ordering is not cosmetic: on
+    ///     deletion the space closes **after** the shards have gone, and on
+    ///     restore it opens **before** they fly back. The reverse would look as
+    ///     though the neighbours were twitching of their own accord.
     func cadenceDisintegration(
         isDestroyed: Bool,
         tuning: DisintegrationTuning = .standard,
@@ -47,9 +46,9 @@ struct CadenceDisintegrationModifier: ViewModifier {
     @State private var isCollapsed = false
     @State private var naturalHeight: CGFloat?
 
-    /// Перестроение соседей — это заметное изменение экрана, а не прямое
-    /// манипулирование, поэтому оно берёт бюджет своего класса, а не
-    /// длительность самого распада.
+    /// Reflowing the neighbours is a noticeable screen change rather than direct
+    /// manipulation, so it takes its own class's budget rather than the duration
+    /// of the break-up itself.
     private var reflow: TimeInterval { MotionBudget.transition.timeInterval }
 
     func body(content: Content) -> some View {
@@ -65,15 +64,16 @@ struct CadenceDisintegrationModifier: ViewModifier {
         let duration = plan.motion?.duration.timeInterval ?? 0
 
         content
-            // Среда могла понизить вид движения до кросс-фейда — тогда
-            // шейдер не запускаем вовсе и гасим прозрачностью.
+            // The environment may have downgraded the motion kind to a
+            // cross-fade — in that case the shader is not run at all and opacity
+            // does the work.
             .modifier(DisintegrationState(progress: usesShader ? progress : 0, tuning: tuning))
             .opacity(usesShader ? 1 : 1 - progress)
             .onGeometryChange(for: CGFloat.self) { proxy in
                 proxy.size.height
             } action: { height in
-                // Замер идёт до внешнего `frame`, поэтому берётся
-                // естественная высота содержимого, а не уже схлопнутая.
+                // The measurement happens before the outer `frame`, so it picks
+                // up the content's natural height rather than the collapsed one.
                 if height > 0 { naturalHeight = height }
             }
             .frame(height: collapsesLayout ? collapsedHeight : nil)
@@ -95,7 +95,7 @@ struct CadenceDisintegrationModifier: ViewModifier {
         if destroyed {
             withAnimation(.linear(duration: duration)) { progress = 1 }
             guard collapsesLayout else { return }
-            // Место закрывается только когда закрывать уже нечего.
+            // The space closes only once there is nothing left to close over.
             withAnimation(.easeInOut(duration: reflow).delay(duration)) {
                 isCollapsed = true
             }
@@ -104,8 +104,8 @@ struct CadenceDisintegrationModifier: ViewModifier {
                 withAnimation(.linear(duration: duration)) { progress = 0 }
                 return
             }
-            // Сначала соседи расступаются, потом в освободившееся место
-            // слетаются осколки.
+            // First the neighbours make room, then the shards fly back into the
+            // space that opened up.
             withAnimation(.easeInOut(duration: reflow)) { isCollapsed = false }
             withAnimation(.linear(duration: duration).delay(reflow)) { progress = 0 }
         }

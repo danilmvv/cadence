@@ -1,10 +1,10 @@
 import CadenceCore
 
-/// Пропускает хаптики не чаще, чем разрешает спека.
+/// Lets haptics through no faster than the spec allows.
 ///
-/// Троттлинг не украшение: `selectionChanged` на скролле без ограничения
-/// частоты даёт непрерывное жужжание — типовая причина, по которой люди
-/// отключают тактильную обратную связь целиком.
+/// Throttling is not a nicety: `selectionChanged` during a fast scroll, with no
+/// rate limit, becomes continuous buzzing — the usual reason people switch
+/// haptic feedback off entirely.
 @MainActor
 public final class HapticScheduler {
     private let output: HapticOutput
@@ -19,8 +19,8 @@ public final class HapticScheduler {
         self.now = now
     }
 
-    /// Возвращает `true`, если хаптик действительно сыграл.
-    /// Каждый паттерн троттлится независимо от остальных.
+    /// Returns `true` if the haptic actually played.
+    /// Each pattern is throttled independently of the others.
     @discardableResult
     public func fire(_ spec: HapticSpec) -> Bool {
         let moment = now()

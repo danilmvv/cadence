@@ -1,5 +1,5 @@
-/// Снимок среды, в которой принимается решение. Значение, а не ссылка:
-/// резолвер обязан быть чистым.
+/// A snapshot of the environment a decision is made in. A value rather than a
+/// reference, because the resolver has to stay pure.
 public struct CadenceContext: Sendable, Equatable {
     public var reduceMotion: Bool
     public var reduceTransparency: Bool
@@ -21,6 +21,6 @@ public struct CadenceContext: Sendable, Equatable {
         self.sceneActive = sceneActive
     }
 
-    /// Обычное устройство без ограничений.
+    /// An ordinary device with nothing switched on.
     public static let standard = CadenceContext()
 }

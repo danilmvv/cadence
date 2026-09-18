@@ -1,8 +1,8 @@
 import Observation
 
-/// Делает понятие tier физически ощутимым: видно, сколько раз эффект
-/// сыграл за сессию. Для workhorse счёт уходит в десятки за минуту,
-/// для signature остаётся единичным.
+/// Makes the notion of a tier tangible: you can see how many times an effect has
+/// played this session. For workhorse the count runs into the dozens within a
+/// minute; for signature it stays in single figures.
 @MainActor
 @Observable
 final class FireCounter {
