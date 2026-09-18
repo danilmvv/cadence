@@ -7,10 +7,6 @@ public enum Curve: Sendable, Equatable, Hashable {
 
 /// Угол экрана. Свой тип, а не SwiftUI `Edge`: эффект привязан к радиусу угла,
 /// и Core не должен зависеть от SwiftUI.
-public enum ScreenCorner: Sendable, Equatable, Hashable, CaseIterable {
-    case topLeading, topTrailing, bottomLeading, bottomTrailing
-}
-
 /// Декларативное описание движения. Не содержит вью — благодаря этому
 /// резолвер остаётся чистым и тестируется без SwiftUI.
 public enum MotionKind: Sendable, Equatable, Hashable {
@@ -29,9 +25,10 @@ public enum MotionKind: Sendable, Equatable, Hashable {
     case progress
     case drawOn
 
-    // Требуют шейдера или стекла. Реализуются вторым планом.
+    // Требуют Metal-шейдера.
     case disintegrate
-    case cornerReveal(corner: ScreenCorner)
+    /// Тот же шейдер, прогнанный в обратную сторону.
+    case reassemble
 }
 
 public struct MotionSpec: Sendable, Equatable, Hashable {

@@ -84,13 +84,11 @@ public struct CadenceMotionModifier<Trigger: Equatable>: ViewModifier {
             // сюда молча.
             content
 
-        case .cornerReveal:
-            // Тоже видовое семейство, но по другой причине, чем скелетон:
-            // элементу нужно обрамление — стеклянная форма, концентричная
-            // углу устройства, — а модификатор обрамление не создаёт, он
-            // только накладывается на чужую вью. Рисует `CadenceCornerReveal`,
-            // публичный вход — `CadenceCornerEmergence`.
-            content
+        case .reassemble:
+            // Тот же шейдер, прогресс идёт 1 -> 0. Работает потому, что
+            // шейдер — чистая функция прогресса: он не хранит состояния
+            // между кадрами и не знает, в какую сторону его гонят.
+            content.modifier(ReassemblePulseModifier(duration: spec.duration.timeInterval, pulse: pulse))
         }
     }
 }

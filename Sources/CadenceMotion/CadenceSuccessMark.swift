@@ -52,7 +52,7 @@ public struct CadenceSuccessMark: View {
                     withAnimation(spec.animation) { isVisible = true }
                 }
 
-        case .timingOnly, .scale, .shake, .shimmer, .progress, .disintegrate, .cornerReveal:
+        case .timingOnly, .scale, .shake, .shimmer, .progress, .disintegrate, .reassemble:
             // resolve(.taskSucceeded) никогда не возвращает эти виды — сюда
             // мы попасть не должны. Явное перечисление, а не default, чтобы
             // новый вид в MotionKind не провалился сюда молча.

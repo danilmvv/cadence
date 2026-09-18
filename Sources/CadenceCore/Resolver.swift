@@ -177,15 +177,22 @@ func baseline(for event: SignatureInteraction) -> FeedbackPlan {
             tier: .signature
         )
 
-    case .summoned(let corner):
+    case .restored:
+        // Та же длительность, что и у распада: сборка — это тот же шейдер,
+        // прогнанный в обратную сторону, и разная длительность в двух
+        // направлениях читалась бы как рассинхрон, а не как замысел.
+        //
+        // Хаптик мягче: возвращение — событие меньшего веса, чем
+        // необратимое удаление, и одинаковая отдача уравняла бы их по
+        // значимости.
         FeedbackPlan(
             motion: MotionSpec(
-                duration: .milliseconds(450),
-                curve: .spring(response: 0.45, damping: 0.75),
+                duration: .milliseconds(1200),
+                curve: .easeOut,
                 change: .journey,
-                kind: .cornerReveal(corner: corner)
+                kind: .reassemble
             ),
-            haptic: HapticSpec(pattern: .impactMedium, minimumInterval: .milliseconds(500)),
+            haptic: HapticSpec(pattern: .impactLight, minimumInterval: .milliseconds(500)),
             tier: .signature
         )
     }

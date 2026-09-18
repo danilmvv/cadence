@@ -44,7 +44,6 @@ enum CatalogEffect: String, CaseIterable, Identifiable, Hashable {
     case taskSuccess
     case validationFailure
     case disintegrate
-    case cornerEmergence
 
     var id: String { rawValue }
 
@@ -52,7 +51,7 @@ enum CatalogEffect: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .pressResponse, .selectionShift, .contentArrival: .workhorse
         case .waitingState, .taskSuccess, .validationFailure: .accent
-        case .disintegrate, .cornerEmergence: .signature
+        case .disintegrate: .signature
         }
     }
 
@@ -65,7 +64,6 @@ enum CatalogEffect: String, CaseIterable, Identifiable, Hashable {
         case .taskSuccess: "checkmark.seal"
         case .validationFailure: "exclamationmark.triangle"
         case .disintegrate: "sparkles"
-        case .cornerEmergence: "arrow.up.left.square"
         }
     }
 
@@ -78,7 +76,6 @@ enum CatalogEffect: String, CaseIterable, Identifiable, Hashable {
         case .taskSuccess: "250 ms · screen"
         case .validationFailure: "300 ms · screen"
         case .disintegrate: "1200 ms · over budget"
-        case .cornerEmergence: "450 ms · over budget"
         }
     }
 
@@ -97,9 +94,7 @@ enum CatalogEffect: String, CaseIterable, Identifiable, Hashable {
         case .validationFailure:
             "A shake that decays rather than stopping dead."
         case .disintegrate:
-            "The card breaks into irregular shards that scatter and fade. Reserve it for deletion that cannot be undone."
-        case .cornerEmergence:
-            "An element flows out of the device's own screen corner, using the hardware radius rather than a guess."
+            "The card breaks into irregular shards that scatter and fade, and reassembles on the way back. Reserve it for deletion that cannot be undone."
         }
     }
 }

@@ -57,7 +57,7 @@ public struct CadenceWaitingIndicator: View {
                 case .progress:
                     CadenceProgressBar(progress: progress, spec: motion)
 
-                case .timingOnly, .scale, .shake, .drawOn, .disintegrate, .cornerReveal:
+                case .timingOnly, .scale, .shake, .drawOn, .disintegrate, .reassemble:
                     // resolve(.waiting) никогда не возвращает эти виды —
                     // сюда мы попасть не должны. Явное перечисление, а не
                     // default, чтобы новый вид в MotionKind не провалился

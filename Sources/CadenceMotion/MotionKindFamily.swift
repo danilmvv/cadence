@@ -8,9 +8,9 @@ public extension MotionKind {
     /// и попытка применить их через `CadenceMotionModifier` — ошибка.
     var isModifierFamily: Bool {
         switch self {
-        case .timingOnly, .scale, .fade, .shake, .disintegrate:
+        case .timingOnly, .scale, .fade, .shake, .disintegrate, .reassemble:
             true
-        case .shimmer, .progress, .drawOn, .cornerReveal:
+        case .shimmer, .progress, .drawOn:
             false
         }
     }

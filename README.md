@@ -94,7 +94,7 @@ public enum RoutineInteraction {
 
 public enum SignatureInteraction {
     case destroyed
-    case summoned(from: ScreenCorner)
+    case restored      // shards fly back and reform
 }
 ```
 
@@ -106,8 +106,7 @@ public enum SignatureInteraction {
 | `waitingState` | accent | persistent | nothing, then skeleton, then determinate progress |
 | `validationFailure` | accent | screen | decaying shake, error haptic |
 | `taskSuccess` | accent | screen | checkmark draws on, success haptic |
-| `disintegrate` | signature | journey | Metal shader; card breaks into irregular shards |
-| `cornerEmergence` | signature | journey | element flows out of the device's own screen corner |
+| `disintegrate` | signature | journey | Metal shader; card breaks into irregular shards, and reassembles on the way back |
 
 ### The waiting rule
 
@@ -153,16 +152,30 @@ CadenceWaitingIndicator(elapsed: elapsed, progress: fraction)
 
 CadenceTaskSuccessIndicator(trigger: didComplete)
 
-CadenceCornerEmergence(from: .topTrailing, isPresented: showsStatus) {
-    Text("Synced")
-}
 ```
 
-Signature effects:
+The signature effect, driven by state so it runs in both directions:
 
 ```swift
 CardView(item)
-    .cadenceSignature(.destroyed, trigger: isDeleted)
+    .cadenceDisintegration(isDestroyed: isDeleted)
+```
+
+Destroying flies the shards out; setting the flag back reassembles them. The same
+shader runs both ways — it is a pure function of progress, so reversing it costs
+nothing.
+
+`collapsesLayout` (on by default) also reflows the neighbours, and the ordering is
+deliberate: the space closes **after** the shards have gone, and opens **before** they
+fly back. The reverse would make the surrounding elements twitch for no visible
+reason. That reflow is a screen-class change, so it takes the 300 ms budget rather
+than the effect's own 1200 ms.
+
+For a one-shot destruction with nothing to return to, the pulse API still applies:
+
+```swift
+CardView(item)
+    .cadenceSignature(.destroyed, trigger: deleteCount)
 ```
 
 ---
@@ -231,8 +244,6 @@ Not done yet, stated plainly:
   research rules can be asserted — no workhorse motion longer than 100 ms, no plan
   emptied by Reduce Motion, no haptic without a visual. Until those exist, the rules
   are prose. This is the next task and the project's premise rests on it.
-- **`cornerEmergence` has never been watched running.** It compiles and the app
-  launches, but no one has confirmed that the glass actually morphs.
 - **Reduce Motion loses information past ten seconds.** Degradation currently collapses
   the motion kind, so a wait longer than ten seconds shows a still skeleton instead of
   a still progress bar — cancelling a research requirement rather than cancelling

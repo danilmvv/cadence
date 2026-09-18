@@ -10,7 +10,6 @@ struct DisintegrateScreen: View {
 
     @State private var destroyCount = 0
     @State private var isDestroyed = false
-    @State private var cardGeneration = 0
 
     @State private var misuseCount = 0
     @State private var misuseGeneration = 0
@@ -43,9 +42,8 @@ struct DisintegrateScreen: View {
             sectionTitle("Where it belongs", detail: "Permanently deleting something the user cannot get back. The weight of the animation matches the weight of the act.")
 
             archiveCard
-                .cadenceSignature(.destroyed, trigger: destroyCount)
-                .id(cardGeneration)
                 .frame(height: 148)
+                .cadenceDisintegration(isDestroyed: isDestroyed)
 
             HStack(spacing: 12) {
                 Button("Delete forever", role: .destructive) {
@@ -59,7 +57,6 @@ struct DisintegrateScreen: View {
 
                 Button("Restore") {
                     isDestroyed = false
-                    cardGeneration += 1
                 }
                 .buttonStyle(.bordered)
                 .disabled(!isDestroyed)

@@ -141,3 +141,56 @@ struct DisintegratePulseModifier: ViewModifier {
         }
     }
 }
+
+/// Обратная сборка импульсом: тот же кадр, прогресс идёт 1 -> 0.
+///
+/// Работает потому, что шейдер — чистая функция прогресса: состояния между
+/// кадрами он не держит и не знает, в какую сторону его гонят.
+///
+/// Осторожно: как и всякий импульс, стартует со своего начального значения,
+/// то есть с распавшегося состояния. Применять к вью, которая уже распалась.
+/// Для пары «распад — сборка» правильный вход — `cadenceDisintegration(isDestroyed:)`,
+/// он управляется состоянием и в покое корректен в обе стороны.
+struct ReassemblePulseModifier: ViewModifier {
+    let duration: TimeInterval
+    let pulse: Int
+
+    func body(content: Content) -> some View {
+        content.keyframeAnimator(initialValue: 1.0, trigger: pulse) { view, progress in
+            view.modifier(DisintegrateFrame(progress: progress))
+        } keyframes: { _ in
+            KeyframeTrack(\.self) {
+                LinearKeyframe(0.0, duration: duration)
+            }
+        }
+    }
+}
+
+/// Распад, управляемый состоянием, а не импульсом.
+///
+/// `@preconcurrency` на соответствии — не украшение: `ViewModifier` изолирован
+/// главным актором, а `Animatable.animatableData` SwiftUI дёргает вне его,
+/// и Swift 6 считает это пересечением изоляции. Гонки тут нет: значение —
+/// одно `Double`, которое читает и пишет сама SwiftUI во время интерполяции.
+///
+/// `Animatable` здесь несёт всю работу: SwiftUI интерполирует `progress`
+/// покадрово, поэтому одно и то же место кода обслуживает оба направления —
+/// 0 -> 1 при удалении и 1 -> 0 при возврате. Импульсом это не выражается:
+/// у импульса есть начало и конец, а у пары «распад — сборка» есть два
+/// устойчивых состояния, между которыми ходят в обе стороны.
+public struct DisintegrationState: ViewModifier, @preconcurrency Animatable {
+    public var progress: Double
+
+    public init(progress: Double) {
+        self.progress = progress
+    }
+
+    public var animatableData: Double {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    public func body(content: Content) -> some View {
+        content.modifier(DisintegrateFrame(progress: progress))
+    }
+}

@@ -23,6 +23,10 @@ public enum RoutineInteraction: Sendable, Equatable {
 public enum SignatureInteraction: Sendable, Equatable {
     /// Необратимое удаление.
     case destroyed
-    /// Появление из угла экрана.
-    case summoned(from: ScreenCorner)
+    /// Обратная сборка после `destroyed`: осколки слетаются назад.
+    ///
+    /// Существует не ради симметрии, а ради демонстрации и отмены: сам
+    /// `destroyed` по определению применяется там, где возвращаться не к
+    /// чему, поэтому в продуктовом коде эта пара встречается редко.
+    case restored
 }

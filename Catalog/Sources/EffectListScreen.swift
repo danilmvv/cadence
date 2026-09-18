@@ -110,7 +110,6 @@ struct EffectListScreen: View {
         case .taskSuccess: TaskSuccessScreen()
         case .validationFailure: ValidationFailureScreen()
         case .disintegrate: DisintegrateScreen()
-        case .cornerEmergence: CornerEmergenceScreen()
         }
     }
 }
